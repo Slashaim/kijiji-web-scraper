@@ -76,13 +76,13 @@ USER_LOCATION_INDEX = None
 	
 -----------------------------------------------------------------------------"""
 
-def ads_to_display(show_top_ads, show_featured_ads, top_ads, featured_ads, normal_ads):
-	if show_top_ads and show_featured_ads:
-		return not len(top_ads) == len(featured_ads) == len(normal_ads) == 0
+def ads_to_display(show_top_ads, show_third_party_ads, top_ads, third_party_ads, normal_ads):
+	if show_top_ads and show_third_party_ads:
+		return not len(top_ads) == len(third_party_ads) == len(normal_ads) == 0
 	elif show_top_ads:
 		return not len(top_ads) == len(normal_ads) == 0
-	elif show_featured_ads:
-		return not len(featured_ads) == len(normal_ads) == 0
+	elif show_third_party_ads:
+		return not len(third_party_ads) == len(normal_ads) == 0
 	else:
 		return not len(normal_ads) == 0
 
@@ -121,6 +121,16 @@ def convert_price_to_display(arg):
 			return '$' + str(nearest_cent)
 	except TypeError:
 		return arg
+
+def convert_html_class_to_display(arg):
+	if arg == 'normal':
+		return 'Normal Ad'
+	elif arg == 'top':
+		return 'Top Ad'
+	elif arg == 'third_party':
+		return 'Third Party Ad'
+	else:
+		return ''
 
 
 """-----------------------------------------------------------------------------
@@ -270,10 +280,10 @@ def create_show_top_ads_checkbox(parent):
 	GUI_ELEMENTS['show_top_ads_checkbox'] = checkbox
 	return checkbox
 
-def create_show_featured_ads_checkbox(parent):
+def create_show_third_party_ads_checkbox(parent):
 	global GUI_ELEMENTS
-	checkbox = wx.CheckBox(parent, wx.ID_ANY, "Show Featured Ads")
-	GUI_ELEMENTS['show_featured_ads_checkbox'] = checkbox
+	checkbox = wx.CheckBox(parent, wx.ID_ANY, "Show Third-Party Ads")
+	GUI_ELEMENTS['show_third_party_ads_checkbox'] = checkbox
 	return checkbox
 
 def create_location_choice(parent):
@@ -300,7 +310,7 @@ def scrape_button_callback(arg):
 	max_ads_text_box = GUI_ELEMENTS['max_ads_text_box']
 	only_new_checkbox = GUI_ELEMENTS['only_new_checkbox']
 	show_top_ads_checkbox = GUI_ELEMENTS['show_top_ads_checkbox']
-	show_featured_ads_checkbox = GUI_ELEMENTS['show_featured_ads_checkbox']
+	show_third_party_ads_checkbox = GUI_ELEMENTS['show_third_party_ads_checkbox']
 	product_name_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
 	max_ads_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
 	product_name_text_box.Refresh()
@@ -329,7 +339,7 @@ def scrape_button_callback(arg):
 	current_page_num = 1
 	only_new_ads = only_new_checkbox.GetValue()
 	show_top_ads = show_top_ads_checkbox.GetValue()
-	show_featured_ads = show_featured_ads_checkbox.GetValue()
+	show_third_party_ads = show_third_party_ads_checkbox.GetValue()
 	AD_ENTRIES = []
 	SET_CURRENT_AD_IDS = set()
 	no_more_new_ads = False
@@ -341,14 +351,14 @@ def scrape_button_callback(arg):
 			page_num = current_page_num
 		)
 		normal_ads = ads.get('normal_ads')
-		featured_ads = ads.get('featured_ads')
+		third_party_ads = ads.get('third_party_ads')
 		top_ads = ads.get('top_ads')
 		# breaks if there are no ads to display
 		if not ads_to_display(
 			show_top_ads = show_top_ads,
-			show_featured_ads = show_featured_ads,
+			show_third_party_ads = show_third_party_ads,
 			top_ads = top_ads,
-			featured_ads = featured_ads,
+			third_party_ads = third_party_ads,
 			normal_ads = normal_ads
 		):
 			break
@@ -366,8 +376,8 @@ def scrape_button_callback(arg):
 		if len(AD_ENTRIES) >= given_max_ads:
 			break
 		# adds featured ads in, breaking if total ads are more than given max
-		if show_featured_ads:
-			for ad in featured_ads:
+		if show_third_party_ads:
+			for ad in third_party_ads:
 				ad_id = ad.get('ad_id')
 				if len(AD_ENTRIES) >= given_max_ads:
 					break
@@ -436,7 +446,7 @@ def generate_scrape_options(parent):
 	max_ads_label = create_max_ads_label(sub_scrape_panel)
 	max_ads_text_box = create_max_ads_text_box(sub_scrape_panel)
 	show_top_ads_checkbox = create_show_top_ads_checkbox(scrape_options_panel)
-	show_featured_ads_checkbox = create_show_featured_ads_checkbox(scrape_options_panel)
+	show_third_party_ads_checkbox = create_show_third_party_ads_checkbox(scrape_options_panel)
 	location_choice = create_location_choice(scrape_options_panel)
 	scrape_button = create_scrape_button(scrape_options_panel)
 	scrape_message = create_scrape_message(scrape_options_panel)
@@ -450,7 +460,7 @@ def generate_scrape_options(parent):
 	scrape_options_sizer.Add(sub_product_panel, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_options_sizer.Add(sub_scrape_panel, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_options_sizer.Add(show_top_ads_checkbox, 0, wx.ALL|wx.EXPAND, 5)
-	scrape_options_sizer.Add(show_featured_ads_checkbox, 0, wx.ALL|wx.EXPAND, 5)
+	scrape_options_sizer.Add(show_third_party_ads_checkbox, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_options_sizer.Add(location_choice, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_options_sizer.Add(scrape_button, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_options_sizer.Add(scrape_message, 0, wx.ALL|wx.EXPAND, 5)
@@ -469,7 +479,7 @@ def enable_scraping_options():
 	GUI_ELEMENTS['only_new_checkbox'].Enable()
 	GUI_ELEMENTS['max_ads_text_box'].Enable()
 	GUI_ELEMENTS['show_top_ads_checkbox'].Enable()
-	GUI_ELEMENTS['show_featured_ads_checkbox'].Enable()
+	GUI_ELEMENTS['show_third_party_ads_checkbox'].Enable()
 	GUI_ELEMENTS['location_choice'].Enable()
 	GUI_ELEMENTS['scrape_button'].Enable()
 
@@ -479,7 +489,7 @@ def disable_scraping_options():
 	GUI_ELEMENTS['only_new_checkbox'].Disable()
 	GUI_ELEMENTS['max_ads_text_box'].Disable()
 	GUI_ELEMENTS['show_top_ads_checkbox'].Disable()
-	GUI_ELEMENTS['show_featured_ads_checkbox'].Disable()
+	GUI_ELEMENTS['show_third_party_ads_checkbox'].Disable()
 	GUI_ELEMENTS['location_choice'].Disable()
 	GUI_ELEMENTS['scrape_button'].Disable()
 	
@@ -723,12 +733,20 @@ def create_scrape_header_text(parent):
 	return text
 
 def create_ad_panel(parent):
-	panel = wx.Panel(parent, wx.ID_ANY, style = wx.BORDER_SIMPLE, size = (0, 100))
+	panel = wx.Panel(parent, wx.ID_ANY, style = wx.BORDER_SIMPLE, size = (0, 110))
 	return panel
 
 def create_ad_sub_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
 	return panel
+
+def create_ad_html_class(parent, ad_class):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	textbox = wx.TextCtrl(parent, wx.ID_ANY, ad_class, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_RICH|wx.TE_RIGHT)
+	textbox.SetBackgroundColour(wx.Colour(240,240,240))
+	textbox.SetStyle(0, 50, attr)
+	return textbox
 
 def create_ad_title(parent, ad_title):
 	textbox = wx.TextCtrl(parent, wx.ID_ANY, ad_title, style = wx.TE_READONLY|wx.BORDER_NONE)
@@ -748,6 +766,7 @@ def create_ad_location(parent, ad_location):
 
 def create_ad_url(parent, ad_url):
 	textbox = wx.TextCtrl(parent, wx.ID_ANY, ad_url, style = wx.TE_READONLY|wx.BORDER_NONE|wx.ALIGN_RIGHT)
+	textbox.SetBackgroundColour(wx.Colour(240, 240, 240))
 	return textbox
 
 def create_ad_description(parent, ad_description):
@@ -763,21 +782,27 @@ def generate_ad_panel(parent, ad_dict):
 	location = ad_dict.get('location')
 	url = ad_dict.get('url')
 	description = ad_dict.get('description')
+	html_class = convert_html_class_to_display(ad_dict.get('html_class'))
 	# setting up panel, sub-panels, and sizers
 	ad_sizer = create_ad_panel_sizer()
 	horiz_sizer_1 = create_ad_horizontal_sizer()
 	horiz_sizer_2 = create_ad_horizontal_sizer()
+	horiz_sizer_3 = create_ad_horizontal_sizer()
 	panel = create_ad_panel(parent)
 	subpanel_1 = create_ad_sub_panel(panel)
 	subpanel_2 = create_ad_sub_panel(panel)
+	subpanel_3 = create_ad_sub_panel(panel)
 	panel.SetSizer(ad_sizer)
 	subpanel_1.SetSizer(horiz_sizer_1)
 	subpanel_2.SetSizer(horiz_sizer_2)
-	# adding price and title
+	subpanel_3.SetSizer(horiz_sizer_3)
+	# adding price, title, and ad type
 	ad_title = create_ad_title(subpanel_1, title)
 	ad_price = create_ad_price(subpanel_1, price)
+	ad_html_class = create_ad_html_class(subpanel_1, html_class)
 	horiz_sizer_1.Add(ad_price, 1, wx.ALL|wx.EXPAND)
-	horiz_sizer_1.Add(ad_title, 1, wx.ALL|wx.EXPAND)
+	horiz_sizer_1.Add(ad_title, 5, wx.ALL|wx.EXPAND)
+	horiz_sizer_1.Add(ad_html_class, 1, wx.ALL|wx.EXPAND)
 	# adding date posted, location, and url
 	ad_date_posted = create_ad_date_posted(subpanel_2, date_posted)
 	ad_location = create_ad_location(subpanel_2, location)
@@ -786,11 +811,13 @@ def generate_ad_panel(parent, ad_dict):
 	horiz_sizer_2.Add(ad_location, 1, wx.ALL|wx.EXPAND)
 	horiz_sizer_2.Add(ad_url, 5, wx.ALL|wx.EXPAND)
 	# adding description
-	ad_description = create_ad_description(panel, description)
+	ad_description = create_ad_description(subpanel_3, description)
+	horiz_sizer_3.Add(ad_description, 1, wx.ALL|wx.EXPAND)
+	horiz_sizer_3.AddStretchSpacer(1)
 	# adding all to main sizer
 	ad_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
 	ad_sizer.Add(subpanel_2, 0, wx.ALL|wx.EXPAND, 5)
-	ad_sizer.Add(ad_description, 0, wx.ALL, 5)
+	ad_sizer.Add(subpanel_3, 0, wx.ALL|wx.EXPAND, 5)
 	return panel
 
 def generate_scrape_view(parent):
