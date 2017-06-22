@@ -36,7 +36,7 @@ UI_TO_LOCATION = {
 	'All of Toronto (GTA)': 'all-of-toronto',
 	'City of Toronto': 'city-of-toronto'
 }
-HARD_MAX_AD_NUMBER = 99
+HARD_MAX_AD_NUMBER = 50
 SET_VIEWED_AD_IDS = set()
 SET_CURRENT_AD_IDS = set()
 
@@ -60,6 +60,15 @@ OTHER_DUMMY = {
 }
 AD_ENTRIES.append(DUMMY)
 AD_ENTRIES.append(OTHER_DUMMY)
+for i in range(0, 30):
+	AD_ENTRIES.append(DUMMY)
+
+global USER_PRODUCT_NAME
+global USER_MAX_ADS
+global USER_LOCATION_INDEX
+USER_PRODUCT_NAME = None
+USER_MAX_ADS = None
+USER_LOCATION_INDEX = None
 
 """-----------------------------------------------------------------------------
 
@@ -92,6 +101,8 @@ def get_max_ads(arg):
 		return max_ads
 	except ValueError:
 		return False
+	except SyntaxError:
+		return False
 
 
 """-----------------------------------------------------------------------------
@@ -103,7 +114,11 @@ def get_max_ads(arg):
 def convert_price_to_display(arg):
 	try:
 		nearest_cent = round(arg, 2)
-		return '$' + str(nearest_cent)
+		cents = arg * 100
+		if cents % 10 == 0:
+			return '$' + str(nearest_cent) + '0'
+		else:
+			return '$' + str(nearest_cent)
 	except TypeError:
 		return arg
 
@@ -221,7 +236,9 @@ def create_product_name_label(parent):
 
 def create_product_name_text_box(parent):
 	global GUI_ELEMENTS
-	text_box = wx.TextCtrl(parent, wx.ID_ANY)
+	global USER_PRODUCT_NAME
+	startingText = USER_PRODUCT_NAME or ''
+	text_box = wx.TextCtrl(parent, wx.ID_ANY, startingText)
 	GUI_ELEMENTS['product_name_text_box'] = text_box
 	return text_box
 
@@ -235,12 +252,15 @@ def create_only_new_checkbox(parent):
 	return checkbox
 
 def create_max_ads_label(parent):
+	global USER_MAX_ADS
 	label = wx.StaticText(parent, wx.ID_ANY, "Max Ads:", style = wx.TE_READONLY|wx.TE_RIGHT|wx.BORDER_NONE)
 	return label
 
 def create_max_ads_text_box(parent):
 	global GUI_ELEMENTS
-	textbox = wx.TextCtrl(parent, wx.ID_ANY, str(HARD_MAX_AD_NUMBER))
+	global HARD_MAX_AD_NUMBER
+	startingText = str(USER_MAX_ADS or HARD_MAX_AD_NUMBER)
+	textbox = wx.TextCtrl(parent, wx.ID_ANY, startingText)
 	GUI_ELEMENTS['max_ads_text_box'] = textbox
 	return textbox
 
@@ -258,7 +278,11 @@ def create_show_featured_ads_checkbox(parent):
 
 def create_location_choice(parent):
 	global GUI_ELEMENTS
+	global VALID_LOCATIONS
+	global USER_LOCATION_INDEX
+	startingChoice = USER_LOCATION_INDEX or 0
 	choice = wx.Choice(parent, wx.ID_ANY, choices = VALID_LOCATIONS)
+	choice.SetSelection(startingChoice)
 	GUI_ELEMENTS['location_choice'] = choice
 	return choice
 
@@ -267,6 +291,9 @@ def scrape_button_callback(arg):
 	global AD_ENTRIES
 	global SET_CURRENT_AD_IDS
 	global SET_VIEWED_AD_IDS
+	global USER_PRODUCT_NAME
+	global USER_MAX_ADS
+	global USER_LOCATION_INDEX
 	product_name_text_box = GUI_ELEMENTS['product_name_text_box']
 	location_choice = GUI_ELEMENTS['location_choice']
 	scrape_message = GUI_ELEMENTS['scrape_message']
@@ -274,6 +301,10 @@ def scrape_button_callback(arg):
 	only_new_checkbox = GUI_ELEMENTS['only_new_checkbox']
 	show_top_ads_checkbox = GUI_ELEMENTS['show_top_ads_checkbox']
 	show_featured_ads_checkbox = GUI_ELEMENTS['show_featured_ads_checkbox']
+	product_name_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
+	max_ads_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
+	product_name_text_box.Refresh()
+	max_ads_text_box.Refresh()
 	scrape_message.SetValue('')
 	given_product_name = product_name_text_box.GetLineText(lineNo = 0)
 	given_max_ads = get_max_ads(max_ads_text_box.GetLineText(lineNo = 0))
@@ -281,13 +312,20 @@ def scrape_button_callback(arg):
 	location = UI_TO_LOCATION.get(location_choice.GetString(given_location))
 	if not valid_product_name(given_product_name):
 		scrape_message.SetValue('Invalid product name. Only alphabetical and numeric characters are supported.')
+		product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
+		product_name_text_box.Refresh()
 		return
-	if not given_max_ads or not 0 <= given_max_ads <= HARD_MAX_AD_NUMBER:
-		scrape_message.SetValue('Invalid maximum ad number. Must be between 0 and ' + str(HARD_MAX_AD_NUMBER) + '.')
+	if not given_max_ads or not 1 <= given_max_ads <= HARD_MAX_AD_NUMBER:
+		max_ads_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
+		max_ads_text_box.Refresh()
+		scrape_message.SetValue('Invalid maximum ad number. Must be between 1 and ' + str(HARD_MAX_AD_NUMBER) + '.')
 		return
 	if not location:
 		scrape_message.SetValue('Invalid location.')
 		return
+	USER_PRODUCT_NAME = given_product_name
+	USER_MAX_ADS = given_max_ads
+	USER_LOCATION_INDEX = given_location
 	current_page_num = 1
 	only_new_ads = only_new_checkbox.GetValue()
 	show_top_ads = show_top_ads_checkbox.GetValue()
@@ -644,34 +682,6 @@ def change_options_panel_state(new_view):
 
 """-----------------------------------------------------------------------------
 
-	Scrolling Panel creation
-	
------------------------------------------------------------------------------"""
-
-def create_scrolling_panel(parent):
-	panel = wx.Panel(parent, wx.ID_ANY)
-	return panel
-
-def create_scrolling_panel_sizer():
-	sizer = wx.BoxSizer(wx.VERTICAL)
-	return sizer
-
-def create_scroll_bar(parent):
-	scrollbar = wx.ScrollBar(parent, wx.ID_ANY, style = wx.SB_VERTICAL, size = (20, 10000))
-	scrollbar.SetScrollbar(0, 5, 10, 4, True)
-	return scrollbar
-
-def generate_scrolling_panel(parent):
-	scrolling_panel = create_scrolling_panel(parent)
-	scrollbar = create_scroll_bar(scrolling_panel)
-	sizer = create_scrolling_panel_sizer()
-	scrolling_panel.SetSizer(sizer)
-	sizer.Add(scrollbar, 0, wx.ALL|wx.EXPAND)
-	return scrolling_panel
-
-
-"""-----------------------------------------------------------------------------
-
 	Scrape View creation
 
 -----------------------------------------------------------------------------"""
@@ -681,7 +691,20 @@ def create_scrape_view_sizer():
 	return sizer
 
 def create_scrape_view_panel(parent):
+	global GUI_ELEMENTS
 	panel = wx.Panel(parent, wx.ID_ANY)
+	GUI_ELEMENTS['scrape_view_panel'] = panel
+	return panel
+
+def create_ads_panel_sizer():
+	sizer = wx.BoxSizer(wx.VERTICAL)
+	return sizer
+
+def create_ads_panel(parent):
+	global GUI_ELEMENTS
+	panel = wx.ScrolledCanvas(parent, wx.ID_ANY, style = wx.VSCROLL)
+	panel.SetScrollbars(1, 40, 1, 40)
+	GUI_ELEMENTS['ads_panel'] = panel
 	return panel
 
 def create_ad_panel_sizer():
@@ -767,21 +790,23 @@ def generate_ad_panel(parent, ad_dict):
 	# adding all to main sizer
 	ad_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
 	ad_sizer.Add(subpanel_2, 0, wx.ALL|wx.EXPAND, 5)
-	ad_sizer.Add(ad_description, 0, wx.ALL|wx.EXPAND, 5)
+	ad_sizer.Add(ad_description, 0, wx.ALL, 5)
 	return panel
 
 def generate_scrape_view(parent):
 	global AD_ENTRIES
-	global GUI_ELEMENTS
 	scrape_view_sizer = create_scrape_view_sizer()
 	scrape_view_panel = create_scrape_view_panel(parent)
 	scrape_view_panel.SetSizer(scrape_view_sizer)
+	ads_panel_sizer = create_ads_panel_sizer()
+	ads_panel = create_ads_panel(scrape_view_panel)
+	ads_panel.SetSizer(ads_panel_sizer)
 	scrape_header_text = create_scrape_header_text(scrape_view_panel)
 	scrape_view_sizer.Add(scrape_header_text, 0, wx.ALL|wx.EXPAND, 5)
-	GUI_ELEMENTS['scrape_view_panel'] = scrape_view_panel
+	scrape_view_sizer.Add(ads_panel, 1, wx.ALL|wx.EXPAND, 5)
 	for ad in AD_ENTRIES:
-		ad_panel = generate_ad_panel(scrape_view_panel, ad)
-		scrape_view_sizer.Add(ad_panel, 0, wx.ALL|wx.EXPAND, 5)
+		ad_panel = generate_ad_panel(ads_panel, ad)
+		ads_panel_sizer.Add(ad_panel, 0, wx.ALL|wx.EXPAND, 5)
 	return scrape_view_panel
 
 def destroy_scrape_view():
@@ -796,6 +821,7 @@ def update_scrape_view():
 	scrape_view = generate_scrape_view(main_frame)
 	main_frame_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
 	main_frame.Layout()
+
 
 """-----------------------------------------------------------------------------
 
@@ -843,10 +869,8 @@ def generate_main_frame():
 	global GUI_ELEMENTS
 	main_frame = create_main_frame()
 	options_panel = generate_options_panel(main_frame)
-	scrolling_panel = generate_scrolling_panel(main_frame)
 	sizer = create_main_frame_sizer()
 	sizer.Add(options_panel, 0, wx.ALL|wx.EXPAND)
-	sizer.Add(scrolling_panel, 0, wx.ALL|wx.EXPAND)
 	main_frame.SetSizer(sizer)
 	GUI_ELEMENTS['main_frame'] = main_frame
 	GUI_ELEMENTS['main_frame_sizer'] = sizer
@@ -874,6 +898,7 @@ def change_view(new_view):
 		change_options_panel_state(new_view)
 		if new_view == 'scraping':
 			scrape_view = generate_scrape_view(main_frame)
+			ads_panel = GUI_ELEMENTS['ads_panel']
 			main_frame_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
 			ACTIVE_VIEW = 'scraping'
 		elif new_view == 'notifications':
