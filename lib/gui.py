@@ -66,9 +66,11 @@ for i in range(0, 30):
 global USER_PRODUCT_NAME
 global USER_MAX_ADS
 global USER_LOCATION_INDEX
+global USER_PRICE_HIGHLIGHT
 USER_PRODUCT_NAME = None
 USER_MAX_ADS = None
 USER_LOCATION_INDEX = None
+USER_PRICE_HIGHLIGHT = None
 
 """-----------------------------------------------------------------------------
 
@@ -99,6 +101,23 @@ def get_max_ads(arg):
 	try:
 		max_ads = int(arg)
 		return max_ads
+	except ValueError:
+		return None
+	except SyntaxError:
+		return None
+
+def get_price_highlight(arg):
+	try:
+		if len(arg) == 0:
+			return None
+		else:
+			price_highlight = float(arg)
+			if price_highlight < 0:
+				return False
+			elif price_highlight == 0:
+				return None
+			else:
+				return price_highlight
 	except ValueError:
 		return False
 	except SyntaxError:
@@ -220,19 +239,11 @@ def create_scrape_options_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
 	return panel
 
-def create_sub_product_sizer():
+def create_scrape_options_horizontal_sizer():
 	sizer = wx.BoxSizer(wx.HORIZONTAL)
 	return sizer
 
-def create_sub_product_panel(parent):
-	panel = wx.Panel(parent, wx.ID_ANY)
-	return panel
-
-def create_sub_scrape_sizer():
-	sizer = wx.BoxSizer(wx.HORIZONTAL)
-	return sizer
-
-def create_sub_scrape_panel(parent):
+def create_scrape_options_sub_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
 	return panel
 
@@ -262,7 +273,6 @@ def create_only_new_checkbox(parent):
 	return checkbox
 
 def create_max_ads_label(parent):
-	global USER_MAX_ADS
 	label = wx.StaticText(parent, wx.ID_ANY, "Max Ads:", style = wx.TE_READONLY|wx.TE_RIGHT|wx.BORDER_NONE)
 	return label
 
@@ -272,6 +282,16 @@ def create_max_ads_text_box(parent):
 	startingText = str(USER_MAX_ADS or HARD_MAX_AD_NUMBER)
 	textbox = wx.TextCtrl(parent, wx.ID_ANY, startingText)
 	GUI_ELEMENTS['max_ads_text_box'] = textbox
+	return textbox
+
+def create_price_highlight_label(parent):
+	label = wx.StaticText(parent, wx.ID_ANY, "Highlight if below price:", style = wx.TE_READONLY|wx.TE_RIGHT|wx.BORDER_NONE)
+	return label
+
+def create_price_highlight_text_box(parent):
+	global GUI_ELEMENTS
+	textbox = wx.TextCtrl(parent, wx.ID_ANY, '')
+	GUI_ELEMENTS['price_highlight_text_box'] = textbox
 	return textbox
 
 def create_show_top_ads_checkbox(parent):
@@ -304,20 +324,25 @@ def scrape_button_callback(arg):
 	global USER_PRODUCT_NAME
 	global USER_MAX_ADS
 	global USER_LOCATION_INDEX
+	global USER_PRICE_HIGHLIGHT
 	product_name_text_box = GUI_ELEMENTS['product_name_text_box']
 	location_choice = GUI_ELEMENTS['location_choice']
 	scrape_message = GUI_ELEMENTS['scrape_message']
 	max_ads_text_box = GUI_ELEMENTS['max_ads_text_box']
+	price_highlight_text_box = GUI_ELEMENTS['price_highlight_text_box']
 	only_new_checkbox = GUI_ELEMENTS['only_new_checkbox']
 	show_top_ads_checkbox = GUI_ELEMENTS['show_top_ads_checkbox']
 	show_third_party_ads_checkbox = GUI_ELEMENTS['show_third_party_ads_checkbox']
 	product_name_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
 	max_ads_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
+	price_highlight_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
 	product_name_text_box.Refresh()
 	max_ads_text_box.Refresh()
+	price_highlight_text_box.Refresh()
 	scrape_message.SetValue('')
 	given_product_name = product_name_text_box.GetLineText(lineNo = 0)
 	given_max_ads = get_max_ads(max_ads_text_box.GetLineText(lineNo = 0))
+	given_price_highlight = get_price_highlight(price_highlight_text_box.GetLineText(lineNo = 0))
 	given_location = location_choice.GetSelection()
 	location = UI_TO_LOCATION.get(location_choice.GetString(given_location))
 	if not valid_product_name(given_product_name):
@@ -330,12 +355,18 @@ def scrape_button_callback(arg):
 		max_ads_text_box.Refresh()
 		scrape_message.SetValue('Invalid maximum ad number. Must be between 1 and ' + str(HARD_MAX_AD_NUMBER) + '.')
 		return
+	if given_price_highlight is False:
+		price_highlight_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
+		price_highlight_text_box.Refresh()
+		scrape_message.SetValue('Invalid price highlight.')
+		return
 	if not location:
 		scrape_message.SetValue('Invalid location.')
 		return
 	USER_PRODUCT_NAME = given_product_name
 	USER_MAX_ADS = given_max_ads
 	USER_LOCATION_INDEX = given_location
+	USER_PRICE_HIGHLIGHT = given_price_highlight
 	current_page_num = 1
 	only_new_ads = only_new_checkbox.GetValue()
 	show_top_ads = show_top_ads_checkbox.GetValue()
@@ -432,33 +463,41 @@ def generate_scrape_options(parent):
 	scrape_options_panel = create_scrape_options_panel(parent)
 	scrape_options_sizer = create_scrape_options_sizer()
 	scrape_options_panel.SetSizer(scrape_options_sizer)
-	sub_product_panel = create_sub_product_panel(scrape_options_panel)
-	sub_product_sizer = create_sub_product_sizer()
-	sub_product_panel.SetSizer(sub_product_sizer)
-	sub_scrape_panel = create_sub_scrape_panel(scrape_options_panel)
-	sub_scrape_sizer = create_sub_scrape_sizer()
-	sub_scrape_panel.SetSizer(sub_scrape_sizer)
+	subpanel_1 = create_scrape_options_sub_panel(scrape_options_panel)
+	subpanel_2 = create_scrape_options_sub_panel(scrape_options_panel)
+	subpanel_3 = create_scrape_options_sub_panel(scrape_options_panel)
+	horiz_sizer_1 = create_scrape_options_horizontal_sizer()
+	horiz_sizer_2 = create_scrape_options_horizontal_sizer()
+	horiz_sizer_3 = create_scrape_options_horizontal_sizer()
+	subpanel_1.SetSizer(horiz_sizer_1)
+	subpanel_2.SetSizer(horiz_sizer_2)
+	subpanel_3.SetSizer(horiz_sizer_3)
 	# creating parts
 	scrape_label = create_scrape_label(scrape_options_panel)
-	product_name_label = create_product_name_label(sub_product_panel)
-	product_name_text_box = create_product_name_text_box(sub_product_panel)
-	only_new_checkbox = create_only_new_checkbox(sub_scrape_panel)
-	max_ads_label = create_max_ads_label(sub_scrape_panel)
-	max_ads_text_box = create_max_ads_text_box(sub_scrape_panel)
+	product_name_label = create_product_name_label(subpanel_1)
+	product_name_text_box = create_product_name_text_box(subpanel_1)
+	only_new_checkbox = create_only_new_checkbox(scrape_options_panel)
+	max_ads_label = create_max_ads_label(subpanel_2)
+	max_ads_text_box = create_max_ads_text_box(subpanel_2)
+	price_highlight_label = create_price_highlight_label(subpanel_3)
+	price_highlight_text_box = create_price_highlight_text_box(subpanel_3)
 	show_top_ads_checkbox = create_show_top_ads_checkbox(scrape_options_panel)
 	show_third_party_ads_checkbox = create_show_third_party_ads_checkbox(scrape_options_panel)
 	location_choice = create_location_choice(scrape_options_panel)
 	scrape_button = create_scrape_button(scrape_options_panel)
 	scrape_message = create_scrape_message(scrape_options_panel)
 	# putting in sizers
-	sub_product_sizer.Add(product_name_label, 0, wx.TOP|wx.EXPAND, 4)
-	sub_product_sizer.Add(product_name_text_box, 1, wx.LEFT|wx.EXPAND, 5)
-	sub_scrape_sizer.Add(only_new_checkbox, 2, wx.ALL|wx.EXPAND, 1)
-	sub_scrape_sizer.Add(max_ads_label, 0, wx.TOP|wx.EXPAND, 4)
-	sub_scrape_sizer.Add(max_ads_text_box, 1, wx.LEFT|wx.EXPAND, 5)
+	horiz_sizer_1.Add(product_name_label, 0, wx.TOP|wx.EXPAND, 4)
+	horiz_sizer_1.Add(product_name_text_box, 1, wx.LEFT|wx.EXPAND, 5)
+	horiz_sizer_2.Add(max_ads_label, 0, wx.TOP|wx.EXPAND, 4)
+	horiz_sizer_2.Add(max_ads_text_box, 1, wx.LEFT|wx.EXPAND, 5)
+	horiz_sizer_3.Add(price_highlight_label, 0, wx.TOP|wx.EXPAND, 4)
+	horiz_sizer_3.Add(price_highlight_text_box, 1, wx.LEFT|wx.EXPAND, 5)
 	scrape_options_sizer.Add(scrape_label, 0, wx.ALL|wx.EXPAND)
-	scrape_options_sizer.Add(sub_product_panel, 0, wx.ALL|wx.EXPAND, 5)
-	scrape_options_sizer.Add(sub_scrape_panel, 0, wx.ALL|wx.EXPAND, 5)
+	scrape_options_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
+	scrape_options_sizer.Add(subpanel_2, 0, wx.ALL|wx.EXPAND, 5)
+	scrape_options_sizer.Add(subpanel_3, 0, wx.ALL|wx.EXPAND, 5)
+	scrape_options_sizer.Add(only_new_checkbox, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_options_sizer.Add(show_top_ads_checkbox, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_options_sizer.Add(show_third_party_ads_checkbox, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_options_sizer.Add(location_choice, 0, wx.ALL|wx.EXPAND, 5)
@@ -732,8 +771,12 @@ def create_scrape_header_text(parent):
 	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.BORDER_NONE|wx.TE_READONLY)
 	return text
 
-def create_ad_panel(parent):
-	panel = wx.Panel(parent, wx.ID_ANY, style = wx.BORDER_SIMPLE, size = (0, 110))
+def create_ad_panel(parent, highlight = False):
+	panel = None
+	if highlight:
+		panel = wx.Panel(parent, wx.ID_ANY, style = wx.BORDER_SIMPLE, size = (0, 110))
+	else:
+		panel = wx.Panel(parent, wx.ID_ANY, style = wx.BORDER_NONE, size = (0, 110))
 	return panel
 
 def create_ad_sub_panel(parent):
@@ -775,6 +818,7 @@ def create_ad_description(parent, ad_description):
 	return textbox
 
 def generate_ad_panel(parent, ad_dict):
+	global USER_PRICE_HIGHLIGHT
 	# converting dict entries to strings
 	title = ad_dict.get('title')
 	price = convert_price_to_display(ad_dict.get('price'))
@@ -788,7 +832,14 @@ def generate_ad_panel(parent, ad_dict):
 	horiz_sizer_1 = create_ad_horizontal_sizer()
 	horiz_sizer_2 = create_ad_horizontal_sizer()
 	horiz_sizer_3 = create_ad_horizontal_sizer()
-	panel = create_ad_panel(parent)
+	panel = None
+	try:
+		if USER_PRICE_HIGHLIGHT is not None and ad_dict.get('price') <= USER_PRICE_HIGHLIGHT:
+			panel = create_ad_panel(parent, highlight = True)
+		else:
+			panel = create_ad_panel(parent)
+	except TypeError:
+		panel = create_ad_panel(parent)
 	subpanel_1 = create_ad_sub_panel(panel)
 	subpanel_2 = create_ad_sub_panel(panel)
 	subpanel_3 = create_ad_sub_panel(panel)
