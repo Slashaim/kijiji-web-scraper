@@ -23,6 +23,7 @@ global AD_ENTRIES
 global ACTIVE_VIEW
 global UI_TO_LOCATION
 global HARD_MAX_AD_NUMBER
+
 global SET_VIEWED_AD_IDS
 global SET_CURRENT_AD_IDS
 GUI_ELEMENTS = {}
@@ -66,27 +67,17 @@ for i in range(0, 30):
 global USER_PRODUCT_NAME
 global USER_MAX_ADS
 global USER_LOCATION_INDEX
-global USER_PRICE_HIGHLIGHT
+global USER_MAX_PRICE
 USER_PRODUCT_NAME = None
 USER_MAX_ADS = None
 USER_LOCATION_INDEX = None
-USER_PRICE_HIGHLIGHT = None
+USER_MAX_PRICE = None
 
 """-----------------------------------------------------------------------------
 
 	Checks
 	
 -----------------------------------------------------------------------------"""
-
-def ads_to_display(show_top_ads, show_third_party_ads, top_ads, third_party_ads, normal_ads):
-	if show_top_ads and show_third_party_ads:
-		return not len(top_ads) == len(third_party_ads) == len(normal_ads) == 0
-	elif show_top_ads:
-		return not len(top_ads) == len(normal_ads) == 0
-	elif show_third_party_ads:
-		return not len(third_party_ads) == len(normal_ads) == 0
-	else:
-		return not len(normal_ads) == 0
 
 # check for name made entirely of alphanumerics or spaces
 alphanumeric_space_full = re.compile('^[\w ]+$')
@@ -106,18 +97,18 @@ def get_max_ads(arg):
 	except SyntaxError:
 		return None
 
-def get_price_highlight(arg):
+def get_max_price(arg):
 	try:
 		if len(arg) == 0:
 			return None
 		else:
-			price_highlight = float(arg)
-			if price_highlight < 0:
+			max_price = float(arg)
+			if max_price < 0:
 				return False
-			elif price_highlight == 0:
+			elif max_price == 0:
 				return None
 			else:
-				return price_highlight
+				return max_price
 	except ValueError:
 		return False
 	except SyntaxError:
@@ -252,7 +243,7 @@ def create_scrape_label(parent):
 	return label
 
 def create_product_name_label(parent):
-	label = wx.StaticText(parent, wx.ID_ANY, "Product Name:", style = wx.TE_READONLY|wx.BORDER_NONE)
+	label = wx.StaticText(parent, wx.ID_ANY, "Search:", style = wx.TE_READONLY|wx.BORDER_NONE)
 	return label
 
 def create_product_name_text_box(parent):
@@ -273,7 +264,7 @@ def create_only_new_checkbox(parent):
 	return checkbox
 
 def create_max_ads_label(parent):
-	label = wx.StaticText(parent, wx.ID_ANY, "Max Ads:", style = wx.TE_READONLY|wx.TE_RIGHT|wx.BORDER_NONE)
+	label = wx.StaticText(parent, wx.ID_ANY, "Max Ads Shown:", style = wx.TE_READONLY|wx.TE_RIGHT|wx.BORDER_NONE)
 	return label
 
 def create_max_ads_text_box(parent):
@@ -284,14 +275,14 @@ def create_max_ads_text_box(parent):
 	GUI_ELEMENTS['max_ads_text_box'] = textbox
 	return textbox
 
-def create_price_highlight_label(parent):
-	label = wx.StaticText(parent, wx.ID_ANY, "Highlight if below price:", style = wx.TE_READONLY|wx.TE_RIGHT|wx.BORDER_NONE)
+def create_max_price_label(parent):
+	label = wx.StaticText(parent, wx.ID_ANY, "Display if below price:", style = wx.TE_READONLY|wx.TE_RIGHT|wx.BORDER_NONE)
 	return label
 
-def create_price_highlight_text_box(parent):
+def create_max_price_text_box(parent):
 	global GUI_ELEMENTS
 	textbox = wx.TextCtrl(parent, wx.ID_ANY, '')
-	GUI_ELEMENTS['price_highlight_text_box'] = textbox
+	GUI_ELEMENTS['max_price_text_box'] = textbox
 	return textbox
 
 def create_show_top_ads_checkbox(parent):
@@ -316,33 +307,59 @@ def create_location_choice(parent):
 	GUI_ELEMENTS['location_choice'] = choice
 	return choice
 
+def gen_def_list_check_max_ads(max_ads):
+	def list_check(ad_list):
+		return len(ad_list) >= max_ads
+	return list_check
+
+def gen_def_entry_incl_max_price(max_price):
+	def entry_incl(ad):
+		price = ad.get('price')
+		try:
+			return price < max_price
+		except TypeError:
+			return False
+	return entry_incl
+
+def gen_def_list_filter_class_list(li):
+	def list_filter(ad):
+		html_class = ad.get('html_class')
+		return html_class in li
+	return list_filter
+
+def gen_def_post_proc_max_ads(max_ads):
+	def post_proc(ad_list):
+		if len(ad_list) > max_ads:
+			return ad_list[0:max_ads]
+		else:
+			return ad_list
+	return post_proc
+
 def scrape_button_callback(arg):
 	global GUI_ELEMENTS
 	global AD_ENTRIES
-	global SET_CURRENT_AD_IDS
-	global SET_VIEWED_AD_IDS
 	global USER_PRODUCT_NAME
 	global USER_MAX_ADS
 	global USER_LOCATION_INDEX
-	global USER_PRICE_HIGHLIGHT
+	global USER_MAX_PRICE
 	product_name_text_box = GUI_ELEMENTS['product_name_text_box']
 	location_choice = GUI_ELEMENTS['location_choice']
 	scrape_message = GUI_ELEMENTS['scrape_message']
 	max_ads_text_box = GUI_ELEMENTS['max_ads_text_box']
-	price_highlight_text_box = GUI_ELEMENTS['price_highlight_text_box']
+	max_price_text_box = GUI_ELEMENTS['max_price_text_box']
 	only_new_checkbox = GUI_ELEMENTS['only_new_checkbox']
 	show_top_ads_checkbox = GUI_ELEMENTS['show_top_ads_checkbox']
 	show_third_party_ads_checkbox = GUI_ELEMENTS['show_third_party_ads_checkbox']
 	product_name_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
 	max_ads_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
-	price_highlight_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
+	max_price_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
 	product_name_text_box.Refresh()
 	max_ads_text_box.Refresh()
-	price_highlight_text_box.Refresh()
+	max_price_text_box.Refresh()
 	scrape_message.SetValue('')
 	given_product_name = product_name_text_box.GetLineText(lineNo = 0)
 	given_max_ads = get_max_ads(max_ads_text_box.GetLineText(lineNo = 0))
-	given_price_highlight = get_price_highlight(price_highlight_text_box.GetLineText(lineNo = 0))
+	given_max_price = get_max_price(max_price_text_box.GetLineText(lineNo = 0))
 	given_location = location_choice.GetSelection()
 	location = UI_TO_LOCATION.get(location_choice.GetString(given_location))
 	if not valid_product_name(given_product_name):
@@ -355,10 +372,10 @@ def scrape_button_callback(arg):
 		max_ads_text_box.Refresh()
 		scrape_message.SetValue('Invalid maximum ad number. Must be between 1 and ' + str(HARD_MAX_AD_NUMBER) + '.')
 		return
-	if given_price_highlight is False:
-		price_highlight_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
-		price_highlight_text_box.Refresh()
-		scrape_message.SetValue('Invalid price highlight.')
+	if given_max_price is False:
+		max_price_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
+		max_price_text_box.Refresh()
+		scrape_message.SetValue('Invalid maximum price.')
 		return
 	if not location:
 		scrape_message.SetValue('Invalid location.')
@@ -366,80 +383,36 @@ def scrape_button_callback(arg):
 	USER_PRODUCT_NAME = given_product_name
 	USER_MAX_ADS = given_max_ads
 	USER_LOCATION_INDEX = given_location
-	USER_PRICE_HIGHLIGHT = given_price_highlight
-	current_page_num = 1
+	USER_MAX_PRICE = given_max_price
 	only_new_ads = only_new_checkbox.GetValue()
 	show_top_ads = show_top_ads_checkbox.GetValue()
 	show_third_party_ads = show_third_party_ads_checkbox.GetValue()
-	AD_ENTRIES = []
-	SET_CURRENT_AD_IDS = set()
-	no_more_new_ads = False
-	while True:
-		# get all ads for current page
-		ads = kijiji_scraper.get_ads(
-			name = given_product_name,
-			location = location,
-			page_num = current_page_num
-		)
-		normal_ads = ads.get('normal_ads')
-		third_party_ads = ads.get('third_party_ads')
-		top_ads = ads.get('top_ads')
-		# breaks if there are no ads to display
-		if not ads_to_display(
-			show_top_ads = show_top_ads,
-			show_third_party_ads = show_third_party_ads,
-			top_ads = top_ads,
-			third_party_ads = third_party_ads,
-			normal_ads = normal_ads
-		):
-			break
-		# adds top ads in, breaking if total ads are more than given max
-		if show_top_ads:
-			for ad in top_ads:
-				ad_id = ad.get('ad_id')
-				if len(AD_ENTRIES) >= given_max_ads:
-					break
-				if (ad_id not in SET_CURRENT_AD_IDS):
-					AD_ENTRIES.append(ad)
-					SET_CURRENT_AD_IDS.add(ad_id)
-					SET_VIEWED_AD_IDS.add(ad_id)
-		# breaks if current num of entries exceeds max entries
-		if len(AD_ENTRIES) >= given_max_ads:
-			break
-		# adds featured ads in, breaking if total ads are more than given max
-		if show_third_party_ads:
-			for ad in third_party_ads:
-				ad_id = ad.get('ad_id')
-				if len(AD_ENTRIES) >= given_max_ads:
-					break
-				if (ad_id not in SET_CURRENT_AD_IDS):
-					AD_ENTRIES.append(ad)
-					SET_CURRENT_AD_IDS.add(ad_id)
-					SET_VIEWED_AD_IDS.add(ad_id)
-		# breaks if current num of entries exceeds max entries
-		if len(AD_ENTRIES) >= given_max_ads:
-			break
-		# adds normal ads in, breaking if total ads are more than given max, or
-		# if only new ads are to be displayed and a previous id is reached
-		for ad in normal_ads:
-			ad_id = ad.get('ad_id')
-			if len(AD_ENTRIES) >= given_max_ads:
-				break
-			if ad_id in SET_VIEWED_AD_IDS:
-				no_more_new_ads = True
-				if only_new_ads:
-					break
-			if (ad_id not in SET_CURRENT_AD_IDS) and ((not only_new_ads) or (ad_id not in SET_VIEWED_AD_IDS)):
-				AD_ENTRIES.append(ad)
-				SET_CURRENT_AD_IDS.add(ad_id)
-				SET_VIEWED_AD_IDS.add(ad_id)
-		# breaks if current num of entries exceeds max entries
-		if len(AD_ENTRIES) >= given_max_ads:
-			break
-		# breaks if a previous normal ad has been found
-		if only_new_ads and no_more_new_ads:
-			break
-		current_page_num += 1
+	# updating AD_ENTRIES
+	list_check = gen_def_list_check_max_ads(given_max_ads)
+	list_filter = None
+	if show_top_ads and show_third_party_ads:
+		list_filter = gen_def_list_filter_class_list(['normal', 'top', 'third_party'])
+	elif show_top_ads:
+		list_filter = gen_def_list_filter_class_list(['normal', 'top'])
+	elif show_third_party_ads:
+		list_filter = gen_def_list_filter_class_list(['normal', 'third_party'])
+	else:
+		list_filter = gen_def_list_filter_class_list(['normal'])
+	entry_incl = gen_def_entry_incl_max_price(given_max_price) if given_max_price else None
+	post_proc = gen_def_post_proc_max_ads(given_max_ads)
+	AD_ENTRIES = kijiji_scraper.get_ad_entries_from_constraints(
+		parameters = {
+			'product_name': given_product_name,
+			'location': location,
+			'show_top_ads': show_top_ads,
+			'show_third_party_ads': show_third_party_ads,
+			'only_new_ads': only_new_ads		
+		},
+		list_check = list_check,
+		list_filter = list_filter,
+		entry_incl = entry_incl,
+		post_proc = post_proc
+	)
 
 	update_scrape_view()
 
@@ -479,8 +452,8 @@ def generate_scrape_options(parent):
 	only_new_checkbox = create_only_new_checkbox(scrape_options_panel)
 	max_ads_label = create_max_ads_label(subpanel_2)
 	max_ads_text_box = create_max_ads_text_box(subpanel_2)
-	price_highlight_label = create_price_highlight_label(subpanel_3)
-	price_highlight_text_box = create_price_highlight_text_box(subpanel_3)
+	max_price_label = create_max_price_label(subpanel_3)
+	max_price_text_box = create_max_price_text_box(subpanel_3)
 	show_top_ads_checkbox = create_show_top_ads_checkbox(scrape_options_panel)
 	show_third_party_ads_checkbox = create_show_third_party_ads_checkbox(scrape_options_panel)
 	location_choice = create_location_choice(scrape_options_panel)
@@ -491,8 +464,8 @@ def generate_scrape_options(parent):
 	horiz_sizer_1.Add(product_name_text_box, 1, wx.LEFT|wx.EXPAND, 5)
 	horiz_sizer_2.Add(max_ads_label, 0, wx.TOP|wx.EXPAND, 4)
 	horiz_sizer_2.Add(max_ads_text_box, 1, wx.LEFT|wx.EXPAND, 5)
-	horiz_sizer_3.Add(price_highlight_label, 0, wx.TOP|wx.EXPAND, 4)
-	horiz_sizer_3.Add(price_highlight_text_box, 1, wx.LEFT|wx.EXPAND, 5)
+	horiz_sizer_3.Add(max_price_label, 0, wx.TOP|wx.EXPAND, 4)
+	horiz_sizer_3.Add(max_price_text_box, 1, wx.LEFT|wx.EXPAND, 5)
 	scrape_options_sizer.Add(scrape_label, 0, wx.ALL|wx.EXPAND)
 	scrape_options_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_options_sizer.Add(subpanel_2, 0, wx.ALL|wx.EXPAND, 5)
@@ -505,32 +478,6 @@ def generate_scrape_options(parent):
 	scrape_options_sizer.Add(scrape_message, 0, wx.ALL|wx.EXPAND, 5)
 	GUI_ELEMENTS['scrape_options_panel'] = scrape_options_panel
 	return scrape_options_panel
-
-"""-----------------------------------------------------------------------------
-
-	Scrape Options actions
-	
------------------------------------------------------------------------------"""
-
-def enable_scraping_options():
-	global GUI_ELEMENTS
-	GUI_ELEMENTS['product_name_text_box'].Enable()
-	GUI_ELEMENTS['only_new_checkbox'].Enable()
-	GUI_ELEMENTS['max_ads_text_box'].Enable()
-	GUI_ELEMENTS['show_top_ads_checkbox'].Enable()
-	GUI_ELEMENTS['show_third_party_ads_checkbox'].Enable()
-	GUI_ELEMENTS['location_choice'].Enable()
-	GUI_ELEMENTS['scrape_button'].Enable()
-
-def disable_scraping_options():
-	global GUI_ELEMENTS
-	GUI_ELEMENTS['product_name_text_box'].Disable()
-	GUI_ELEMENTS['only_new_checkbox'].Disable()
-	GUI_ELEMENTS['max_ads_text_box'].Disable()
-	GUI_ELEMENTS['show_top_ads_checkbox'].Disable()
-	GUI_ELEMENTS['show_third_party_ads_checkbox'].Disable()
-	GUI_ELEMENTS['location_choice'].Disable()
-	GUI_ELEMENTS['scrape_button'].Disable()
 	
 
 """-----------------------------------------------------------------------------
@@ -575,21 +522,6 @@ def generate_notifications_options(parent):
 	notifications_options_sizer.Add(clear_all_notifications_button, 0, wx.ALL|wx.EXPAND, 5)
 	GUI_ELEMENTS['notifications_options_panel'] = notifications_options_panel
 	return notifications_options_panel
-
-
-"""-----------------------------------------------------------------------------
-
-	Notifications Options actions
-	
------------------------------------------------------------------------------"""
-
-def enable_notifications_options():
-	global GUI_ELEMENTS
-	GUI_ELEMENTS['clear_all_notifications_button'].Enable()
-
-def disable_notifications_options():
-	global GUI_ELEMENTS
-	GUI_ELEMENTS['clear_all_notifications_button'].Disable()
 
 
 """-----------------------------------------------------------------------------
@@ -658,25 +590,6 @@ def generate_threads_options(parent):
 	threads_options_sizer.Add(kill_all_threads_button, 0, wx.ALL|wx.EXPAND, 5)
 	GUI_ELEMENTS['threads_options_panel'] = threads_options_panel
 	return threads_options_panel
-
-
-"""-----------------------------------------------------------------------------
-
-	Threads Options actions
-	
------------------------------------------------------------------------------"""
-
-def enable_threads_options():
-	global GUI_ELEMENTS
-	GUI_ELEMENTS['send_all_notifications_button'].Enable()
-	GUI_ELEMENTS['stop_all_notifications_button'].Enable()
-	GUI_ELEMENTS['kill_all_threads_button'].Enable()
-
-def disable_threads_options():
-	global GUI_ELEMENTS
-	GUI_ELEMENTS['send_all_notifications_button'].Disable()
-	GUI_ELEMENTS['stop_all_notifications_button'].Disable()
-	GUI_ELEMENTS['kill_all_threads_button'].Disable()
 
 
 """-----------------------------------------------------------------------------
@@ -796,7 +709,11 @@ def create_ad_title(parent, ad_title):
 	return textbox
 
 def create_ad_price(parent, ad_price):
-	textbox = wx.TextCtrl(parent, wx.ID_ANY, ad_price, style = wx.TE_READONLY|wx.BORDER_NONE)
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	textbox = wx.TextCtrl(parent, wx.ID_ANY, ad_price, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_RICH)
+	textbox.SetBackgroundColour(wx.Colour(240,240,240))
+	textbox.SetStyle(0, 50, attr)
 	return textbox
 
 def create_ad_date_posted(parent, ad_date_posted):
@@ -818,7 +735,6 @@ def create_ad_description(parent, ad_description):
 	return textbox
 
 def generate_ad_panel(parent, ad_dict):
-	global USER_PRICE_HIGHLIGHT
 	# converting dict entries to strings
 	title = ad_dict.get('title')
 	price = convert_price_to_display(ad_dict.get('price'))
@@ -832,14 +748,7 @@ def generate_ad_panel(parent, ad_dict):
 	horiz_sizer_1 = create_ad_horizontal_sizer()
 	horiz_sizer_2 = create_ad_horizontal_sizer()
 	horiz_sizer_3 = create_ad_horizontal_sizer()
-	panel = None
-	try:
-		if USER_PRICE_HIGHLIGHT is not None and ad_dict.get('price') <= USER_PRICE_HIGHLIGHT:
-			panel = create_ad_panel(parent, highlight = True)
-		else:
-			panel = create_ad_panel(parent)
-	except TypeError:
-		panel = create_ad_panel(parent)
+	panel = create_ad_panel(parent)
 	subpanel_1 = create_ad_sub_panel(panel)
 	subpanel_2 = create_ad_sub_panel(panel)
 	subpanel_3 = create_ad_sub_panel(panel)

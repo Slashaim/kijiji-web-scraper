@@ -2,6 +2,15 @@ import lxml
 import lxml.html
 import requests
 
+"""-----------------------------------------------------------------------------
+
+	Globals
+
+-----------------------------------------------------------------------------"""
+
+global SET_VIEWED_AD_IDS
+SET_VIEWED_AD_IDS = set()
+
 # class names of ads
 # since Kijiji is weird, it uses a lot of whitespace in the class names
 NORMAL_AD_CLASS = '''"
@@ -193,6 +202,77 @@ def get_ads(name, location, page_num):
 		'top_ads': top_ads,
 		'third_party_ads': third_party_ads
 	}
+
+def return_true(arg):
+	return True
+
+def return_arg(arg):
+	return arg
+
+def ads_to_display(show_top_ads, show_third_party_ads, top_ads, third_party_ads, normal_ads):
+	if show_top_ads and show_third_party_ads:
+		return not len(top_ads) == len(third_party_ads) == len(normal_ads) == 0
+	elif show_top_ads:
+		return not len(top_ads) == len(normal_ads) == 0
+	elif show_third_party_ads:
+		return not len(third_party_ads) == len(normal_ads) == 0
+	else:
+		return not len(normal_ads) == 0
+
+# generates list of ad entries based on parameters, mandatory list_check callable,
+# and optional filter and post-processing callables
+def get_ad_entries_from_constraints(parameters, list_check, entry_incl, list_filter, post_proc):
+	global SET_VIEWED_AD_IDS
+	entry_incl = return_true if entry_incl is None else entry_incl
+	list_filter = return_true if list_filter is None else list_filter
+	post_proc = return_arg if list_filter is None else post_proc
+	ad_entries = []
+	set_current_ad_ids = set()
+	current_page_num = 1
+	product_name = parameters.get('product_name')
+	location = parameters.get('location')
+	show_top_ads = parameters.get('show_top_ads')
+	show_third_party_ads = parameters.get('show_third_party_ads')
+	only_new_ads = parameters.get('only_new_ads')
+	previous_ad_found = False
+	# stops GET when list_check returns True or previous_ad_found
+	while (not list_check(ad_entries)) and (not(only_new_ads and previous_ad_found)):
+		# get ads from page and join into list; increment page number
+		ads = get_ads(
+			name = product_name,
+			location = location,
+			page_num = current_page_num
+		)
+		normal_ads = ads.get('normal_ads')
+		top_ads = ads.get('top_ads')
+		third_party_ads = ads.get('third_party_ads')
+		ad_list = top_ads + normal_ads + third_party_ads
+		current_page_num += 1
+		# breaks if no ads to display
+		if not ads_to_display(
+			show_top_ads = show_top_ads,
+			show_third_party_ads = show_third_party_ads,
+			top_ads = top_ads,
+			third_party_ads = third_party_ads,
+			normal_ads = normal_ads
+		):
+			break
+		# iterate and append if not in set and entry_incl returns True
+		for ad in ad_list:
+			ad_id = ad.get('ad_id')
+			if (ad_id not in set_current_ad_ids) and entry_incl(ad):
+				if not (only_new_ads and ad_id in SET_VIEWED_AD_IDS):
+					ad_entries.append(ad)
+					set_current_ad_ids.add(ad_id)
+					SET_VIEWED_AD_IDS.add(ad_id)
+				else:
+					previous_ad_found = True
+					break
+		# filters list based on parameters and provided list_filter
+		ad_entries = [ad for ad in ad_entries if list_filter(ad)]
+	# runs post_proc callable on list and returns result
+	return post_proc(ad_entries)
+
 
 
 def main():
