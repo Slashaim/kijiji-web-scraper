@@ -209,16 +209,6 @@ def return_true(arg):
 def return_arg(arg):
 	return arg
 
-def ads_to_display(show_top_ads, show_third_party_ads, top_ads, third_party_ads, normal_ads):
-	if show_top_ads and show_third_party_ads:
-		return not len(top_ads) == len(third_party_ads) == len(normal_ads) == 0
-	elif show_top_ads:
-		return not len(top_ads) == len(normal_ads) == 0
-	elif show_third_party_ads:
-		return not len(third_party_ads) == len(normal_ads) == 0
-	else:
-		return not len(normal_ads) == 0
-
 # generates list of ad entries based on parameters, mandatory list_check callable,
 # and optional filter and post-processing callables
 def get_ad_entries_from_constraints(parameters, list_check, entry_incl, list_filter, post_proc):
@@ -248,14 +238,14 @@ def get_ad_entries_from_constraints(parameters, list_check, entry_incl, list_fil
 		third_party_ads = ads.get('third_party_ads')
 		ad_list = top_ads + normal_ads + third_party_ads
 		current_page_num += 1
-		# breaks if no ads to display
-		if not ads_to_display(
-			show_top_ads = show_top_ads,
-			show_third_party_ads = show_third_party_ads,
-			top_ads = top_ads,
-			third_party_ads = third_party_ads,
-			normal_ads = normal_ads
-		):
+		# breaks if it finds a normal ad it has already seen
+		previous_normal_ad_found = False
+		for ad in normal_ads:
+			ad_id = ad.get('ad_id')
+			if ad_id in set_current_ad_ids:
+				previous_normal_ad_found = True
+				break
+		if previous_normal_ad_found:
 			break
 		# iterate and append if not in set and entry_incl returns True
 		for ad in ad_list:

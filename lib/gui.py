@@ -413,7 +413,6 @@ def scrape_button_callback(arg):
 		entry_incl = entry_incl,
 		post_proc = post_proc
 	)
-
 	update_scrape_view()
 
 def create_scrape_button(parent):
