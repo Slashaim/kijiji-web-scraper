@@ -8,6 +8,7 @@
 
 import wx
 import re
+import asyncio
 import kijiji_scraper
 
 
@@ -24,8 +25,6 @@ global ACTIVE_VIEW
 global UI_TO_LOCATION
 global HARD_MAX_AD_NUMBER
 
-global SET_VIEWED_AD_IDS
-global SET_CURRENT_AD_IDS
 GUI_ELEMENTS = {}
 VALID_LOCATIONS = [
 	'All of Toronto (GTA)',
@@ -38,8 +37,6 @@ UI_TO_LOCATION = {
 	'City of Toronto': 'city-of-toronto'
 }
 HARD_MAX_AD_NUMBER = 50
-SET_VIEWED_AD_IDS = set()
-SET_CURRENT_AD_IDS = set()
 
 global DUMMY
 DUMMY = {
@@ -307,34 +304,6 @@ def create_location_choice(parent):
 	GUI_ELEMENTS['location_choice'] = choice
 	return choice
 
-def gen_def_list_check_max_ads(max_ads):
-	def list_check(ad_list):
-		return len(ad_list) >= max_ads
-	return list_check
-
-def gen_def_entry_incl_max_price(max_price):
-	def entry_incl(ad):
-		price = ad.get('price')
-		try:
-			return price < max_price
-		except TypeError:
-			return False
-	return entry_incl
-
-def gen_def_list_filter_class_list(li):
-	def list_filter(ad):
-		html_class = ad.get('html_class')
-		return html_class in li
-	return list_filter
-
-def gen_def_post_proc_max_ads(max_ads):
-	def post_proc(ad_list):
-		if len(ad_list) > max_ads:
-			return ad_list[0:max_ads]
-		else:
-			return ad_list
-	return post_proc
-
 def scrape_button_callback(arg):
 	global GUI_ELEMENTS
 	global AD_ENTRIES
@@ -350,6 +319,7 @@ def scrape_button_callback(arg):
 	only_new_checkbox = GUI_ELEMENTS['only_new_checkbox']
 	show_top_ads_checkbox = GUI_ELEMENTS['show_top_ads_checkbox']
 	show_third_party_ads_checkbox = GUI_ELEMENTS['show_third_party_ads_checkbox']
+	# setting initial gui state
 	product_name_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
 	max_ads_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
 	max_price_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
@@ -362,6 +332,7 @@ def scrape_button_callback(arg):
 	given_max_price = get_max_price(max_price_text_box.GetLineText(lineNo = 0))
 	given_location = location_choice.GetSelection()
 	location = UI_TO_LOCATION.get(location_choice.GetString(given_location))
+	# checking for valid inputs
 	if not valid_product_name(given_product_name):
 		scrape_message.SetValue('Invalid product name. Only alphabetical and numeric characters are supported.')
 		product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
@@ -388,18 +359,29 @@ def scrape_button_callback(arg):
 	show_top_ads = show_top_ads_checkbox.GetValue()
 	show_third_party_ads = show_third_party_ads_checkbox.GetValue()
 	# updating AD_ENTRIES
-	list_check = gen_def_list_check_max_ads(given_max_ads)
-	list_filter = None
-	if show_top_ads and show_third_party_ads:
-		list_filter = gen_def_list_filter_class_list(['normal', 'top', 'third_party'])
-	elif show_top_ads:
-		list_filter = gen_def_list_filter_class_list(['normal', 'top'])
-	elif show_third_party_ads:
-		list_filter = gen_def_list_filter_class_list(['normal', 'third_party'])
-	else:
-		list_filter = gen_def_list_filter_class_list(['normal'])
-	entry_incl = gen_def_entry_incl_max_price(given_max_price) if given_max_price else None
-	post_proc = gen_def_post_proc_max_ads(given_max_ads)
+	def list_check(ad_list):
+		return len(ad_list) >= given_max_ads
+
+	def entry_incl(ad):
+		# determining if class allowed
+		html_class = ad.get('html_class')
+		cond_a = html_class == 'normal'
+		cond_b = html_class == 'top' and show_top_ads
+		cond_c = html_class == 'third_party' and show_third_party_ads
+		class_allowed = cond_a or cond_b or cond_c
+		# determining if price allowed
+		price_allowed = True
+		price = ad.get('price')
+		if given_max_price:
+			try:
+				price_allowed = price <= given_max_price
+			except TypeError:
+				price_allowed = False
+		return class_allowed and price_allowed
+
+	def post_proc(ad_list):
+		return ad_list[:given_max_ads]
+
 	AD_ENTRIES = kijiji_scraper.get_ad_entries_from_constraints(
 		parameters = {
 			'product_name': given_product_name,
@@ -409,7 +391,6 @@ def scrape_button_callback(arg):
 			'only_new_ads': only_new_ads		
 		},
 		list_check = list_check,
-		list_filter = list_filter,
 		entry_incl = entry_incl,
 		post_proc = post_proc
 	)
@@ -700,11 +681,15 @@ def create_ad_html_class(parent, ad_class):
 	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
 	textbox = wx.TextCtrl(parent, wx.ID_ANY, ad_class, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_RICH|wx.TE_RIGHT)
 	textbox.SetBackgroundColour(wx.Colour(240,240,240))
-	textbox.SetStyle(0, 50, attr)
+	textbox.SetStyle(0, 500, attr)
 	return textbox
 
 def create_ad_title(parent, ad_title):
-	textbox = wx.TextCtrl(parent, wx.ID_ANY, ad_title, style = wx.TE_READONLY|wx.BORDER_NONE)
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	textbox = wx.TextCtrl(parent, wx.ID_ANY, ad_title, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_RICH)
+	textbox.SetBackgroundColour(wx.Colour(240,240,240))
+	textbox.SetStyle(0, 500, attr)
 	return textbox
 
 def create_ad_price(parent, ad_price):
@@ -712,7 +697,7 @@ def create_ad_price(parent, ad_price):
 	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
 	textbox = wx.TextCtrl(parent, wx.ID_ANY, ad_price, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_RICH)
 	textbox.SetBackgroundColour(wx.Colour(240,240,240))
-	textbox.SetStyle(0, 50, attr)
+	textbox.SetStyle(0, 500, attr)
 	return textbox
 
 def create_ad_date_posted(parent, ad_date_posted):
@@ -815,6 +800,16 @@ def update_scrape_view():
 
 -----------------------------------------------------------------------------"""
 
+def create_notifications_view_sizer():
+	sizer = wx.BoxSizer(wx.VERTICAL)
+	return sizer
+
+def create_notifications_view_panel(parent):
+	global GUI_ELEMENTS
+	panel = wx.Panel(parent, wx.ID_ANY)
+	GUI_ELEMENTS['notifications_view_panel'] = panel
+	return panel
+
 def generate_notifications_view(parent):
 	pass
 
@@ -827,6 +822,16 @@ def destroy_notifications_view():
 	Threads View creation
 
 -----------------------------------------------------------------------------"""
+
+def create_threads_view_sizer():
+	sizer = wx.BoxSizer(wx.VERTICAL)
+	return sizer
+
+def create_threads_view_panel(parent):
+	global GUI_ELEMENTS
+	panel = wx.Panel(parent, wx.ID_ANY)
+	GUI_ELEMENTS['threads_view_panel'] = panel
+	return panel
 
 def generate_threads_view(parent):
 	pass
