@@ -2,6 +2,8 @@ import lxml
 import lxml.html
 import requests
 import asyncio
+import aiohttp
+import time
 
 """-----------------------------------------------------------------------------
 
@@ -82,10 +84,16 @@ def generate_page_url_from_url_elements(url_elements, page_num):
 		raise IndexError("Page number must be a positive integer.")
 
 def get_root_element_from_url(url):
+	start = time.perf_counter()
 	page = requests.get(url)
-	return lxml.html.fromstring(page.content)
+	print('html-get:' + str(time.perf_counter() - start))
+	start = time.perf_counter()
+	html_content = lxml.html.fromstring(page.text)
+	print('conversion-to-html-content:' + str(time.perf_counter() - start))
+	return lxml.html.fromstring(page.text)
 
 def get_ads_from_page(tree, class_name):
+	start = time.perf_counter()
 	ads = tree.findall('.//div[@class=' + class_name + ']')
 	dicts = []
 	for ad in ads:
@@ -121,7 +129,7 @@ def get_ads_from_page(tree, class_name):
 			'ad_id': ad_id,
 			'html_class': None
 		})
-
+	print('parse-and-process:' + str(time.perf_counter() - start))
 	return dicts
 
 # third party ads have several differences
@@ -244,11 +252,13 @@ def get_ad_entries_from_constraints(parameters, list_check, entry_incl, post_pro
 	# through 10 pages or more
 	while (not list_check(ad_entries)) and (not is_last_page) and (current_page_num <= 10):
 		# get ads from page and join into list; increment page number
+		start = time.perf_counter()
 		ad_page_information = get_ad_page_information(
 			name = product_name,
 			location = location,
 			page_num = current_page_num
 		)
+		print('page:' + str(current_page_num))
 		normal_ads = ad_page_information.get('normal_ads')
 		top_ads = ad_page_information.get('top_ads')
 		third_party_ads = ad_page_information.get('third_party_ads')
@@ -266,12 +276,16 @@ def get_ad_entries_from_constraints(parameters, list_check, entry_incl, post_pro
 					set_current_ad_ids.add(ad_id)
 					SET_VIEWED_AD_IDS.add(ad_id)
 	# runs post_proc callable on list and returns result
+	print('final page:' + str(current_page_num - 1))
 	return post_proc(ad_entries)
+
+def spawn_gui_updating_thread(parameters, list_check, entry_incl, post_proc):
+	pass
 
 
 
 def main():
-	info = get_ad_page_information('adsfasd', 'all-of-toronto', 1)
+	info = get_ad_page_information('playstation', 'all-of-toronto', 1)
 	bottom_bar_information = info.get('bottom_bar_information')
 	is_last_page = bottom_bar_information.get('is_last_page')
 	print(is_last_page)
