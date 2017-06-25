@@ -1,3 +1,10 @@
+"""-----------------------------------------------------------------------------
+
+	kijiji_scraper
+
+-----------------------------------------------------------------------------"""
+
+
 import lxml
 import lxml.html
 import requests
@@ -11,11 +18,16 @@ import time
 
 -----------------------------------------------------------------------------"""
 
-global SET_VIEWED_AD_IDS
-SET_VIEWED_AD_IDS = set()
+global VIEWED_AD_IDS
+VIEWED_AD_IDS = set()
 
-# class names of ads
-# since Kijiji is weird, it uses a lot of whitespace in the class names
+global CLIENT_SESSION
+CLIENT_SESSION = None
+
+global NORMAL_AD_CLASS
+global TOP_AD_CLASS
+global THIRD_PARTY_TOP_AD_CLASS
+global THIRD_PARTY_NORMAL_AD_CLASS
 NORMAL_AD_CLASS = '''"
             search-item
              regular-ad
@@ -34,8 +46,8 @@ THIRD_PARTY_NORMAL_AD_CLASS = '''"
              cas-channel regular-ad third-party
         "'''
 
-# lookup table of valid locations
-location_lookup = {
+global LOCATION_LOOKUP
+LOCATION_LOOKUP = {
 	'all-of-toronto': {
 		'name': 'b-gta-greater-toronto-area',
 		'code': 'k0l1700272'
@@ -46,6 +58,17 @@ location_lookup = {
 	}
 }
 
+global NUM_PAGES_PER_CYCLE
+NUM_PAGES_PER_CYCLE = 5
+
+global CONNECTION_TIMEOUT
+CONNECTION_TIMEOUT = 5
+
+"""-----------------------------------------------------------------------------
+
+	Helper Functions
+
+-----------------------------------------------------------------------------"""
 
 def convert_price_text_to_float(text):
 	try:
@@ -54,9 +77,9 @@ def convert_price_text_to_float(text):
 	except ValueError:
 		return text
 
-
 def generate_url_elements_from_name_and_location(name, location):
-	location_entry = location_lookup.get(location)
+	global LOCATION_LOOKUP
+	location_entry = LOCATION_LOOKUP.get(location)
 	if location_entry is not None:
 		stripped_name = name.strip().lower()
 		product_name = stripped_name.replace(" ", "-")
@@ -70,7 +93,6 @@ def generate_url_elements_from_name_and_location(name, location):
 	else:
 		raise KeyError("Given location is not a valid location.")
 
-
 def generate_page_url_from_url_elements(url_elements, page_num):
 	product_name = url_elements.get('product_name')
 	location_name = url_elements.get('location_name')
@@ -83,17 +105,7 @@ def generate_page_url_from_url_elements(url_elements, page_num):
 	else:
 		raise IndexError("Page number must be a positive integer.")
 
-def get_root_element_from_url(url):
-	start = time.perf_counter()
-	page = requests.get(url)
-	print('html-get:' + str(time.perf_counter() - start))
-	start = time.perf_counter()
-	html_content = lxml.html.fromstring(page.text)
-	print('conversion-to-html-content:' + str(time.perf_counter() - start))
-	return lxml.html.fromstring(page.text)
-
 def get_ads_from_page(tree, class_name):
-	start = time.perf_counter()
 	ads = tree.findall('.//div[@class=' + class_name + ']')
 	dicts = []
 	for ad in ads:
@@ -129,7 +141,6 @@ def get_ads_from_page(tree, class_name):
 			'ad_id': ad_id,
 			'html_class': None
 		})
-	print('parse-and-process:' + str(time.perf_counter() - start))
 	return dicts
 
 # third party ads have several differences
@@ -170,26 +181,53 @@ def get_third_party_ads_from_page(tree, class_name):
 
 def get_bottom_bar_information(tree):
 	bottom_bar = tree.find('.//div[@class="bottom-bar"]')
-	current_page_num = None
-	is_last_page = None
+	page_num = None
+	is_final_page = None
 	if bottom_bar is None:
-		current_page_num = 1
-		is_last_page = True
+		page_num = 1
+		is_final_page = True
 	else:
 		raw_current_page_num = bottom_bar.find('.//span[@class="selected"]').text
-		current_page_num = int(raw_current_page_num)
+		page_num = int(raw_current_page_num)
 		next_button = bottom_bar.find('.//a[@title="Next"]')
-		is_last_page = next_button is None
+		is_final_page = next_button is None
 	return {
-		'current_page_num': current_page_num,
-		'is_last_page': is_last_page
+		'page_num': page_num,
+		'is_final_page': is_final_page
 	}
 
+def routine_ad_page_information_page_range(parameters, start, end):
+	name = parameters.get('product_name')
+	location = parameters.get('location')
+	info_list = parameters.get('info_list')
+	if start <= end:
+		li = [get_ad_page_information(
+			name = name,
+			location = location,
+			page_num = x,
+			info_list = info_list
+		) for x in range(start, end)]
+		return asyncio.gather(*li)
+	else:
+		raise ValueError('Start page num must be less than end page num.')
 
-def get_ad_page_information(name, location, page_num):
+
+"""-----------------------------------------------------------------------------
+
+	Asynchronous Requests
+
+-----------------------------------------------------------------------------"""
+
+async def get_ad_page_information(name, location, page_num, info_list):
+	global CONNECTION_TIMEOUT
 	elements = generate_url_elements_from_name_and_location(name, location)
 	url = generate_page_url_from_url_elements(elements, page_num)
-	root = get_root_element_from_url(url)
+	root = None
+	async with aiohttp.ClientSession() as client_session:
+		with aiohttp.Timeout(CONNECTION_TIMEOUT):
+			page = await client_session.get(url)
+			html = await page.text()
+			root = lxml.html.fromstring(html)
 	bottom_bar_information = get_bottom_bar_information(root)
 	normal_ads = None
 	top_ads = None
@@ -222,73 +260,95 @@ def get_ad_page_information(name, location, page_num):
 		third_party_top_ads = []
 	third_party_ads = third_party_top_ads
 	third_party_ads.extend(third_party_normal_ads)
-	return {
+	new_entry = {
 		'normal_ads': normal_ads,
 		'top_ads': top_ads,
 		'third_party_ads': third_party_ads,
 		'bottom_bar_information': bottom_bar_information
 	}
+	info_list.append(new_entry)
 
-def return_true(arg):
-	return True
 
-def return_arg(arg):
-	return arg
+"""-----------------------------------------------------------------------------
+
+	Public Routines
+
+-----------------------------------------------------------------------------"""
 
 # generates list of ad entries based on parameters, mandatory list_check callable,
 # and optional filter and post-processing callables
-def get_ad_entries_from_constraints(parameters, list_check, entry_incl, post_proc):
-	global SET_VIEWED_AD_IDS
+def get_ad_entries_from_constraints(parameters, list_check):
+	global VIEWED_AD_IDS
+	global NUM_PAGES_PER_CYCLE
+	# initialising function-level vars
 	ad_entries = []
-	set_current_ad_ids = set()
-	current_page_num = 1
+	current_ad_ids = set()
+	start_page_num = 1
+	# reading in parameters and assigning defaults
+	end_page_num = start_page_num + NUM_PAGES_PER_CYCLE
 	product_name = parameters.get('product_name')
 	location = parameters.get('location')
 	show_top_ads = parameters.get('show_top_ads')
 	show_third_party_ads = parameters.get('show_third_party_ads')
 	only_new_ads = parameters.get('only_new_ads')
-	is_last_page = False
-	# stops GET when list_check returns True or previous_ad_found or searches
-	# through 10 pages or more
-	while (not list_check(ad_entries)) and (not is_last_page) and (current_page_num <= 10):
-		# get ads from page and join into list; increment page number
-		start = time.perf_counter()
-		ad_page_information = get_ad_page_information(
-			name = product_name,
-			location = location,
-			page_num = current_page_num
-		)
-		print('page:' + str(current_page_num))
-		normal_ads = ad_page_information.get('normal_ads')
-		top_ads = ad_page_information.get('top_ads')
-		third_party_ads = ad_page_information.get('third_party_ads')
-		ad_list = top_ads + normal_ads + third_party_ads
-		current_page_num += 1
-		# updates is_last_page
-		bottom_bar_information = ad_page_information.get('bottom_bar_information')
-		is_last_page = bottom_bar_information.get('is_last_page')
-		# iterate and append if not in set and entry_incl returns True
-		for ad in ad_list:
-			ad_id = ad.get('ad_id')
-			if (ad_id not in set_current_ad_ids) and entry_incl(ad):
-				if not (only_new_ads and ad_id in SET_VIEWED_AD_IDS):
-					ad_entries.append(ad)
-					set_current_ad_ids.add(ad_id)
-					SET_VIEWED_AD_IDS.add(ad_id)
+	entry_incl = parameters.get('entry_incl')
+	post_proc = parameters.get('post_proc')
+	entry_incl = entry_incl if entry_incl is not None else lambda x:True
+	post_proc = post_proc if post_proc is not None else lambda x:x
+	is_final_page = False
+	test_cycle = 1
+	# stops GET when list_check returns True or previous_ad_found
+	start = time.perf_counter()
+	while (not list_check(ad_entries)) and (not is_final_page):
+		print('ON CYCLE: ' + str(test_cycle))
+		test_cycle += 1
+		# get ads from page puts information from pages into info_list
+		# page order is not guaranteed, depending on order coroutines finish
+		info_list = []
+		parameters['info_list'] = info_list
+		loop = asyncio.get_event_loop()
+		routine = routine_ad_page_information_page_range(parameters, start_page_num, end_page_num)
+		loop.run_until_complete(routine)
+		start_page_num += NUM_PAGES_PER_CYCLE
+		end_page_num += NUM_PAGES_PER_CYCLE
+		# sorts list of ads by page and iterates through
+		info_list.sort(key = lambda x:x['bottom_bar_information']['page_num'])
+		for ad_page_information in info_list:
+			normal_ads = ad_page_information['normal_ads']
+			top_ads = ad_page_information['top_ads']
+			third_party_ads = ad_page_information['third_party_ads']
+			ad_list = top_ads + normal_ads + third_party_ads
+			is_final_page = ad_page_information['bottom_bar_information']['is_final_page']
+			# iterate and append if not in set and entry_incl returns True
+			for ad in ad_list:
+				ad_id = ad['ad_id']
+				if (ad_id not in current_ad_ids) and entry_incl(ad):
+					if not (only_new_ads and ad_id in VIEWED_AD_IDS):
+						ad_entries.append(ad)
+						current_ad_ids.add(ad_id)
+						VIEWED_AD_IDS.add(ad_id)
 	# runs post_proc callable on list and returns result
-	print('final page:' + str(current_page_num - 1))
+	print('FULL TIME:' + str(time.perf_counter() - start))
 	return post_proc(ad_entries)
-
-def spawn_gui_updating_thread(parameters, list_check, entry_incl, post_proc):
-	pass
 
 
 
 def main():
-	info = get_ad_page_information('playstation', 'all-of-toronto', 1)
-	bottom_bar_information = info.get('bottom_bar_information')
-	is_last_page = bottom_bar_information.get('is_last_page')
-	print(is_last_page)
+	ad_entries = get_ad_entries_from_constraints(
+		{
+			'product_name': 'dafsf',
+			'location': 'city-of-toronto',
+			'show_top_ads': False,
+			'show_third_party_ads': False,
+			'only_new_ads': False,
+			'entry_incl': lambda x:True,
+			'post_proc': lambda x:x[:50]
+		},
+		list_check = lambda x: len(x) >= 50,
+	)
+	for ad in ad_entries:
+		title = ad.get('title')
+		print(title)
 
 
 

@@ -382,19 +382,22 @@ def scrape_button_callback(arg):
 	def post_proc(ad_list):
 		return ad_list[:given_max_ads]
 
-	AD_ENTRIES = kijiji_scraper.get_ad_entries_from_constraints(
-		parameters = {
-			'product_name': given_product_name,
-			'location': location,
-			'show_top_ads': show_top_ads,
-			'show_third_party_ads': show_third_party_ads,
-			'only_new_ads': only_new_ads		
-		},
-		list_check = list_check,
-		entry_incl = entry_incl,
-		post_proc = post_proc
-	)
-	update_scrape_view()
+	try:
+		AD_ENTRIES = kijiji_scraper.get_ad_entries_from_constraints(
+			parameters = {
+				'product_name': given_product_name,
+				'location': location,
+				'show_top_ads': show_top_ads,
+				'show_third_party_ads': show_third_party_ads,
+				'only_new_ads': only_new_ads,
+				'entry_incl': entry_incl,
+				'post_proc': post_proc		
+			},
+			list_check = list_check
+		)
+		update_scrape_view()
+	except asyncio.TimeoutError:
+		scrape_message.SetValue('Connection timed out. Check internet connectivity or try again later.')
 
 def create_scrape_button(parent):
 	global GUI_ELEMENTS
