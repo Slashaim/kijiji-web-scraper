@@ -75,8 +75,19 @@ dummy_notification = {
 	'ad_title': 'foo',
 	'ad_url': 'http://website.org'
 }
+other_dummy_notification = {
+	'notification_type': 'newad',
+	'front_text': 'New Ad',
+	'notification_title': 'dlajfkl',
+	'ad_price': 'iuebn',
+	'ad_title': 'foo',
+	'ad_url': 'http://website.org'
+}
 for i in range(0, 30):
-	NOTIFICATION_ENTRIES.append(dummy_notification)
+	if i % 2 == 0:
+		NOTIFICATION_ENTRIES.append(dummy_notification)
+	else:
+		NOTIFICATION_ENTRIES.append(other_dummy_notification)
 
 global USER_PRODUCT_NAME
 global USER_MAX_ADS
@@ -912,12 +923,19 @@ def create_notification_sub_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
 	return panel
 
-def notification_remove_notification_button_callback(arg):
-	print("remove notification button pressed")
+def notification_remove_notification_button_callback_generator(panel, entry):
+	def callback(arg):
+		global NOTIFICATION_ENTRIES
+		panel.Destroy()
+		NOTIFICATION_ENTRIES.remove(entry)
+		update_notifications_view()
+		print("remove notification button pressed")
+	return callback
 
-def create_notification_remove_notification_button(parent):
+def create_notification_remove_notification_button(parent, panel, entry):
 	button = wx.Button(parent, wx.ID_ANY, "Remove Notification")
-	button.Bind(wx.EVT_BUTTON, notification_remove_notification_button_callback)
+	callback = notification_remove_notification_button_callback_generator(panel, entry)
+	button.Bind(wx.EVT_BUTTON, callback)
 	return button
 
 def create_notification_newad_front_text(parent, text):
@@ -979,7 +997,7 @@ def generate_notification_newad(parent, notification_dict):
 	newad_ad_price = create_notification_newad_price(subpanel_2, ad_price)
 	newad_ad_title = create_notification_newad_adtitle(subpanel_2, ad_title)
 	newad_ad_url = create_notification_newad_url(subpanel_3, ad_url)
-	remove_notification_button = create_notification_remove_notification_button(subpanel_4)
+	remove_notification_button = create_notification_remove_notification_button(subpanel_4, notification_panel, notification_dict)
 	# putting in sizers
 	horiz_sizer_1.Add(newad_front_text, 1, wx.ALL|wx.EXPAND)
 	horiz_sizer_1.Add(newad_notification_title, 5, wx.ALL|wx.EXPAND)
