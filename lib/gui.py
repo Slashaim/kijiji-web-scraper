@@ -67,6 +67,17 @@ HARD_MAX_AD_NUMBER = 50
 # for i in range(0, 30):
 # 	AD_ENTRIES.append(DUMMY)
 
+dummy_notification = {
+	'notification_type': 'newad',
+	'front_text': 'New Ad',
+	'notification_title': 'Title Here',
+	'ad_price': 500.2,
+	'ad_title': 'foo',
+	'ad_url': 'http://website.org'
+}
+for i in range(0, 30):
+	NOTIFICATION_ENTRIES.append(dummy_notification)
+
 global USER_PRODUCT_NAME
 global USER_MAX_ADS
 global USER_LOCATION_INDEX
@@ -333,12 +344,12 @@ def scrape_button_callback(arg):
 	max_ads_text_box.Refresh()
 	max_price_text_box.Refresh()
 	scrape_message.SetValue('')
+	# getting initial gui state and checking for valid inputs
 	given_product_name = product_name_text_box.GetLineText(lineNo = 0)
 	given_max_ads = get_max_ads(max_ads_text_box.GetLineText(lineNo = 0))
 	given_max_price = get_max_price(max_price_text_box.GetLineText(lineNo = 0))
 	given_location = location_choice.GetSelection()
 	location = UI_TO_LOCATION.get(location_choice.GetString(given_location))
-	# checking for valid inputs
 	if not valid_product_name(given_product_name):
 		scrape_message.SetValue('Invalid product name. Only alphabetical and numeric characters are supported.')
 		product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
@@ -434,7 +445,7 @@ def generate_scrape_options(parent):
 	subpanel_1.SetSizer(horiz_sizer_1)
 	subpanel_2.SetSizer(horiz_sizer_2)
 	subpanel_3.SetSizer(horiz_sizer_3)
-	# creating parts
+	# creating elements
 	scrape_label = create_scrape_label(scrape_options_panel)
 	product_name_label = create_product_name_label(subpanel_1)
 	product_name_text_box = create_product_name_text_box(subpanel_1)
@@ -488,7 +499,9 @@ def create_notifications_label(parent):
 	return label
 
 def clear_all_notifications_button_callback(arg):
-	print("Clear all notifications button pressed")
+	global NOTIFICATION_ENTRIES
+	NOTIFICATION_ENTRIES = []
+	update_notifications_view()
 
 def create_clear_all_notifications_button(parent):
 	global GUI_ELEMENTS
@@ -527,58 +540,104 @@ def create_threads_options_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
 	return panel
 
+def create_threads_options_sub_panel_sizer():
+	sizer = wx.BoxSizer(wx.HORIZONTAL)
+	return sizer
+
+def create_threads_options_sub_panel(parent):
+	panel = wx.Panel(parent, wx.ID_ANY)
+	return panel
+
 def create_threads_label(parent):
 	label = wx.StaticText(parent, wx.ID_ANY, "Threads", style = wx.TE_READONLY|wx.TE_CENTRE|wx.BORDER_NONE)
 	return label
 
-def send_all_notifications_callback(arg):
-	print("Send all notifications button pressed")
+def create_thread_product_name_text_box_label(parent):
+	label = wx.StaticText(parent, wx.ID_ANY, "Product Name:", style = wx.TE_READONLY|wx.TE_CENTRE|wx.BORDER_NONE)
+	return label
 
-def create_send_all_notifications_button(parent):
+def create_thread_product_name_text_box(parent):
 	global GUI_ELEMENTS
-	button = wx.Button(parent, wx.ID_ANY, "Send All Tray Notifications")
-	button.Bind(wx.EVT_BUTTON, send_all_notifications_callback)
-	GUI_ELEMENTS['send_all_notifications_button'] = button
-	return button
+	text_box = wx.TextCtrl(parent, wx.ID_ANY)
+	GUI_ELEMENTS['thread_product_name_text_box'] = text_box
+	return text_box
 
-def stop_all_notifications_callback(parent):
-	print("Stop all notifications button pressed")
-
-def create_stop_all_notifications_button(parent):
+def create_thread_location_choice(parent):
 	global GUI_ELEMENTS
-	button = wx.Button(parent, wx.ID_ANY, "Stop All Tray Notifications")
-	button.Bind(wx.EVT_BUTTON, stop_all_notifications_callback)
-	GUI_ELEMENTS['stop_all_notifications_button'] = button
-	return button 
+	global VALID_LOCATIONS
+	choice = wx.Choice(parent, wx.ID_ANY, choices = VALID_LOCATIONS)
+	choice.SetSelection(0)
+	GUI_ELEMENTS['thread_location_choice'] = choice
+	return choice
 
-def kill_all_threads_button_callback(arg):
-	print("Kill all threads button pressed")
+def thread_button_callback(arg):
+	print('thread button pressed')
 
-def create_kill_all_threads_button(parent):
+def create_thread_button(parent):
 	global GUI_ELEMENTS
-	button = wx.Button(parent, wx.ID_ANY, "Kill All Threads")
-	button.Bind(wx.EVT_BUTTON, kill_all_threads_button_callback)
-	GUI_ELEMENTS['kill_all_threads_button'] = button
+	button = wx.Button(parent, wx.ID_ANY, "Create New Thread")
+	button.Bind(wx.EVT_BUTTON, thread_button_callback)
+	GUI_ELEMENTS['thread_button'] = button
 	return button
 
 def generate_threads_options(parent):
 	global GUI_ELEMENTS
-	# creating panel and setting sizer
+	# creating panels and setting sizers
 	threads_options_panel = create_threads_options_panel(parent)
 	threads_options_sizer = create_threads_options_sizer()
 	threads_options_panel.SetSizer(threads_options_sizer)
+	subpanel_1 = create_threads_options_sub_panel(threads_options_panel)
+	horiz_sizer_1 = create_threads_options_sub_panel_sizer()
+	subpanel_1.SetSizer(horiz_sizer_1)
 	# creating elements
 	threads_label = create_threads_label(threads_options_panel)
-	send_all_notifications_button = create_send_all_notifications_button(threads_options_panel)
-	stop_all_notifications_button = create_stop_all_notifications_button(threads_options_panel)
-	kill_all_threads_button = create_kill_all_threads_button(threads_options_panel)
+	thread_product_name_text_box_label = create_thread_product_name_text_box_label(subpanel_1)
+	thread_product_name_text_box = create_thread_product_name_text_box(subpanel_1)
+	thread_location_choice = create_thread_location_choice(threads_options_panel)
+	thread_button = create_thread_button(threads_options_panel)
 	# putting in sizers
+	horiz_sizer_1.Add(thread_product_name_text_box_label, 0, wx.TOP|wx.EXPAND, 4)
+	horiz_sizer_1.Add(thread_product_name_text_box, 1, wx.LEFT|wx.EXPAND, 5)
 	threads_options_sizer.Add(threads_label, 0, wx.ALL|wx.EXPAND)
-	threads_options_sizer.Add(send_all_notifications_button, 0, wx.ALL|wx.EXPAND, 5)
-	threads_options_sizer.Add(stop_all_notifications_button, 0, wx.ALL|wx.EXPAND, 5)
-	threads_options_sizer.Add(kill_all_threads_button, 0, wx.ALL|wx.EXPAND, 5)
+	threads_options_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
+	threads_options_sizer.Add(thread_location_choice, 0, wx.ALL|wx.EXPAND, 5)
+	threads_options_sizer.Add(thread_button, 0, wx.ALL|wx.EXPAND, 5)
 	GUI_ELEMENTS['threads_options_panel'] = threads_options_panel
 	return threads_options_panel
+
+
+"""-----------------------------------------------------------------------------
+
+	Threads Options actions
+	
+-----------------------------------------------------------------------------"""
+
+def add_thread_entry(thread_dict):
+	global THREADS_ENTRIES
+	entry = {
+		'product_name': thread_dict.get('product_name'),
+		'location': thread_dict.get('location_name'),
+		'start_time': time.perf_counter(),
+		'last_scrape_time': 0,
+		'active_time': 0,
+		'time_to_next_scrape': 0,
+		'cycle_time': thread_dict.get('cycle_time'),
+		'scrape_on_next': False
+	}
+	THREADS_ENTRIES.append(entry)
+
+def time_update_thread_entries():
+	global THREADS_ENTRIES
+	for entry in THREADS_ENTRIES:
+		current_time = time.perf_counter()
+		start_time = entry['start_time']
+		last_scrape_time = entry['last_scrape_time']
+		cycle_time = entry['cycle_time']
+		entry['active_time'] = current_time - start_time
+		entry['time_to_next_scrape'] = (last_scrape_time + cycle_time) - current_time
+		if (current_time - last_scrape_time) > cycle_time:
+			entry['scrape_on_next'] = True
+
 
 
 """-----------------------------------------------------------------------------
@@ -837,7 +896,110 @@ def create_notification_header_text(parent):
 	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.BORDER_NONE|wx.TE_READONLY)
 	return text
 
+def create_notification_panel_sizer():
+	sizer = wx.BoxSizer(wx.VERTICAL)
+	return sizer
+
+def create_notification_horizontal_sizer():
+	sizer = wx.BoxSizer(wx.HORIZONTAL)
+	return sizer
+
+def create_notification_panel(parent):
+	panel = wx.Panel(parent, wx.ID_ANY)
+	return panel
+
+def create_notification_sub_panel(parent):
+	panel = wx.Panel(parent, wx.ID_ANY)
+	return panel
+
+def notification_remove_notification_button_callback(arg):
+	print("remove notification button pressed")
+
+def create_notification_remove_notification_button(parent):
+	button = wx.Button(parent, wx.ID_ANY, "Remove Notification")
+	button.Bind(wx.EVT_BUTTON, notification_remove_notification_button_callback)
+	return button
+
+def create_notification_newad_front_text(parent, text):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	text = wx.TextCtrl(parent, wx.ID_ANY, text, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
+	text.SetBackgroundColour(wx.Colour(240,240,240))
+	text.SetStyle(0, 500, attr)
+	return text
+
+def create_notification_newad_title(parent, title):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	text = wx.TextCtrl(parent, wx.ID_ANY, title, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
+	text.SetBackgroundColour(wx.Colour(240, 240, 240))
+	text.SetStyle(0, 500, attr)
+	return text
+
+def create_notification_newad_price(parent, price):
+	text = wx.TextCtrl(parent, wx.ID_ANY, price, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL)
+	text.SetBackgroundColour(wx.Colour(240, 240, 240))
+	return text
+
+def create_notification_newad_adtitle(parent, title):
+	text = wx.TextCtrl(parent, wx.ID_ANY, title, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL)
+	text.SetBackgroundColour(wx.Colour(240, 240, 240))
+	return text
+
+def create_notification_newad_url(parent, url):
+	text = wx.TextCtrl(parent, wx.ID_ANY, url, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL)
+	text.SetBackgroundColour(wx.Colour(240, 240, 240))
+	return text
+
+def generate_notification_newad(parent, notification_dict):
+	front_text = notification_dict.get('front_text')
+	notification_title = notification_dict.get('notification_title')
+	ad_price = convert_price_to_display(notification_dict.get('ad_price'))
+	ad_title = notification_dict.get('ad_title')
+	ad_url = notification_dict.get('ad_url')
+	# creating panels and setting sizers
+	notification_panel = create_notification_panel(parent)
+	notification_panel_sizer = create_notification_panel_sizer()
+	notification_panel.SetSizer(notification_panel_sizer)
+	subpanel_1 = create_notification_sub_panel(notification_panel)
+	subpanel_2 = create_notification_sub_panel(notification_panel)
+	subpanel_3 = create_notification_sub_panel(notification_panel)
+	subpanel_4 = create_notification_sub_panel(notification_panel)
+	horiz_sizer_1 = create_notification_horizontal_sizer()
+	horiz_sizer_2 = create_notification_horizontal_sizer()
+	horiz_sizer_3 = create_notification_horizontal_sizer()
+	horiz_sizer_4 = create_notification_horizontal_sizer()
+	subpanel_1.SetSizer(horiz_sizer_1)
+	subpanel_2.SetSizer(horiz_sizer_2)
+	subpanel_3.SetSizer(horiz_sizer_3)
+	subpanel_4.SetSizer(horiz_sizer_4)
+	# creating elements
+	newad_front_text = create_notification_newad_front_text(subpanel_1, front_text)
+	newad_notification_title = create_notification_newad_title(subpanel_1, notification_title)
+	newad_ad_price = create_notification_newad_price(subpanel_2, ad_price)
+	newad_ad_title = create_notification_newad_adtitle(subpanel_2, ad_title)
+	newad_ad_url = create_notification_newad_url(subpanel_3, ad_url)
+	remove_notification_button = create_notification_remove_notification_button(subpanel_4)
+	# putting in sizers
+	horiz_sizer_1.Add(newad_front_text, 1, wx.ALL|wx.EXPAND)
+	horiz_sizer_1.Add(newad_notification_title, 5, wx.ALL|wx.EXPAND)
+	horiz_sizer_2.Add(newad_ad_price, 1, wx.ALL|wx.EXPAND)
+	horiz_sizer_2.Add(newad_ad_title, 5, wx.ALL|wx.EXPAND)
+	horiz_sizer_3.Add(newad_ad_url, 1, wx.ALL|wx.EXPAND)
+	horiz_sizer_4.Add(remove_notification_button, 0, wx.ALL|wx.EXPAND)
+	notification_panel_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
+	notification_panel_sizer.Add(subpanel_2, 0, wx.ALL|wx.EXPAND, 5)
+	notification_panel_sizer.Add(subpanel_3, 0, wx.ALL|wx.EXPAND, 5)
+	notification_panel_sizer.Add(subpanel_4, 0, wx.ALL|wx.EXPAND, 5)
+	return notification_panel
+
+def generate_notification(parent, notification_dict):
+	notification_type = notification_dict.get('notification_type')
+	if notification_type == 'newad':
+		return generate_notification_newad(parent, notification_dict)
+
 def generate_notifications_view(parent):
+	global GUI_ELEMENTS
 	global NOTIFICATION_ENTRIES
 	notifications_view_sizer = create_notifications_view_sizer()
 	notifications_view_panel = create_notifications_view_panel(parent)
@@ -848,12 +1010,23 @@ def generate_notifications_view(parent):
 	notifications_header = create_notification_header_text(notifications_view_panel)
 	notifications_view_sizer.Add(notifications_header, 0, wx.ALL|wx.EXPAND, 5)
 	notifications_view_sizer.Add(notifications_panel, 1, wx.ALL|wx.EXPAND, 5)
+	for entry in NOTIFICATION_ENTRIES:
+		notification_panel = generate_notification(notifications_panel, entry)
+		notifications_panel_sizer.Add(notification_panel, 0, wx.ALL|wx.EXPAND, 5)
 	return notifications_view_panel
-
 
 def destroy_notifications_view():
 	global GUI_ELEMENTS
 	GUI_ELEMENTS['notifications_view_panel'].Destroy()
+
+def update_notifications_view():
+	global GUI_ELEMENTS
+	main_frame = GUI_ELEMENTS['main_frame']
+	main_frame_sizer = GUI_ELEMENTS['main_frame_sizer']
+	destroy_notifications_view()
+	notifications_view = generate_notifications_view(main_frame)
+	main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
+	main_frame.Layout()
 
 
 """-----------------------------------------------------------------------------
