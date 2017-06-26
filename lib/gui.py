@@ -8,7 +8,9 @@
 
 import wx
 import re
+import time
 import asyncio
+import threading
 import kijiji_scraper
 
 
@@ -21,6 +23,8 @@ import kijiji_scraper
 global GUI_ELEMENTS
 global VALID_LOCATIONS
 global AD_ENTRIES
+global NOTIFICATION_ENTRIES
+global THREADS_ENTRIES
 global ACTIVE_VIEW
 global UI_TO_LOCATION
 global HARD_MAX_AD_NUMBER
@@ -31,6 +35,8 @@ VALID_LOCATIONS = [
 	'City of Toronto'
 ]
 AD_ENTRIES = []
+NOTIFICATION_ENTRIES = []
+THREADS_ENTRIES = []
 ACTIVE_VIEW = None
 UI_TO_LOCATION = {
 	'All of Toronto (GTA)': 'all-of-toronto',
@@ -38,28 +44,28 @@ UI_TO_LOCATION = {
 }
 HARD_MAX_AD_NUMBER = 50
 
-global DUMMY
-DUMMY = {
-	'title': 'Test',
-	'price': 500.00,
-	'description': 'Foo',
-	'location': 'Here',
-	'date_posted': '5 seconds ago',
-	'url': 'http://website.org'
-}
-global OTHER_DUMMY
-OTHER_DUMMY = {
-	'title': 'Example',
-	'price': 'this is the price',
-	'description': 'Bar',
-	'location': 'Not here',
-	'date_posted': '5 years ago',
-	'url': 'http://website.org'
-}
-AD_ENTRIES.append(DUMMY)
-AD_ENTRIES.append(OTHER_DUMMY)
-for i in range(0, 30):
-	AD_ENTRIES.append(DUMMY)
+# global DUMMY
+# DUMMY = {
+# 	'title': 'Test',
+# 	'price': 500.00,
+# 	'description': 'Foo',
+# 	'location': 'Here',
+# 	'date_posted': '5 seconds ago',
+# 	'url': 'http://website.org'
+# }
+# global OTHER_DUMMY
+# OTHER_DUMMY = {
+# 	'title': 'Example',
+# 	'price': 'this is the price',
+# 	'description': 'Bar',
+# 	'location': 'Not here',
+# 	'date_posted': '5 years ago',
+# 	'url': 'http://website.org'
+# }
+# AD_ENTRIES.append(DUMMY)
+# AD_ENTRIES.append(OTHER_DUMMY)
+# for i in range(0, 30):
+# 	AD_ENTRIES.append(DUMMY)
 
 global USER_PRODUCT_NAME
 global USER_MAX_ADS
@@ -813,11 +819,41 @@ def create_notifications_view_panel(parent):
 	GUI_ELEMENTS['notifications_view_panel'] = panel
 	return panel
 
+def create_notifications_panel_sizer():
+	sizer = wx.BoxSizer(wx.VERTICAL)
+	return sizer
+
+def create_notifications_panel(parent):
+	global GUI_ELEMENTS
+	panel = wx.ScrolledCanvas(parent, wx.ID_ANY, style = wx.VSCROLL)
+	panel.SetScrollbars(1, 40, 1, 40)
+	GUI_ELEMENTS['notifications_panel'] = panel
+	return panel
+
+def create_notification_header_text(parent):
+	global NOTIFICATION_ENTRIES
+	num_notifications = len(NOTIFICATION_ENTRIES)
+	displayed = str(num_notifications) + ' notifications found.'
+	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.BORDER_NONE|wx.TE_READONLY)
+	return text
+
 def generate_notifications_view(parent):
-	pass
+	global NOTIFICATION_ENTRIES
+	notifications_view_sizer = create_notifications_view_sizer()
+	notifications_view_panel = create_notifications_view_panel(parent)
+	notifications_view_panel.SetSizer(notifications_view_sizer)
+	notifications_panel_sizer = create_notifications_panel_sizer()
+	notifications_panel = create_notifications_panel(notifications_view_panel)
+	notifications_panel.SetSizer(notifications_panel_sizer)
+	notifications_header = create_notification_header_text(notifications_view_panel)
+	notifications_view_sizer.Add(notifications_header, 0, wx.ALL|wx.EXPAND, 5)
+	notifications_view_sizer.Add(notifications_panel, 1, wx.ALL|wx.EXPAND, 5)
+	return notifications_view_panel
+
 
 def destroy_notifications_view():
-	pass
+	global GUI_ELEMENTS
+	GUI_ELEMENTS['notifications_view_panel'].Destroy()
 
 
 """-----------------------------------------------------------------------------
@@ -836,11 +872,40 @@ def create_threads_view_panel(parent):
 	GUI_ELEMENTS['threads_view_panel'] = panel
 	return panel
 
+def create_threads_panel_sizer():
+	sizer = wx.BoxSizer(wx.VERTICAL)
+	return sizer
+
+def create_threads_panel(parent):
+	global GUI_ELEMENTS
+	panel = wx.ScrolledCanvas(parent, wx.ID_ANY, style = wx.VSCROLL)
+	panel.SetScrollbars(1, 40, 1, 40)
+	GUI_ELEMENTS['threads_panel'] = panel
+	return panel
+
+def create_threads_header_text(parent):
+	global THREADS_ENTRIES
+	num_threads = len(THREADS_ENTRIES)
+	displayed = str(num_threads) + ' running threads found.'
+	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.BORDER_NONE|wx.TE_READONLY)
+	return text
+
 def generate_threads_view(parent):
-	pass
+	global THREADS_ENTRIES
+	threads_view_sizer = create_threads_view_sizer()
+	threads_view_panel = create_threads_view_panel(parent)
+	threads_view_panel.SetSizer(threads_view_sizer)
+	threads_panel_sizer = create_threads_panel_sizer()
+	threads_panel = create_threads_panel(threads_view_panel)
+	threads_panel.SetSizer(threads_panel_sizer)
+	threads_header = create_threads_header_text(threads_view_panel)
+	threads_view_sizer.Add(threads_header, 0, wx.ALL|wx.EXPAND, 5)
+	threads_view_sizer.Add(threads_panel, 1, wx.ALL|wx.EXPAND, 5)
+	return threads_view_panel
 
 def destroy_threads_view():
-	pass
+	global GUI_ELEMENTS
+	GUI_ELEMENTS['threads_view_panel'].Destroy()
 
 """-----------------------------------------------------------------------------
 
@@ -892,16 +957,15 @@ def change_view(new_view):
 		change_options_panel_state(new_view)
 		if new_view == 'scraping':
 			scrape_view = generate_scrape_view(main_frame)
-			ads_panel = GUI_ELEMENTS['ads_panel']
 			main_frame_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
 			ACTIVE_VIEW = 'scraping'
 		elif new_view == 'notifications':
 			notifications_view = generate_notifications_view(main_frame)
-			# main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
+			main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
 			ACTIVE_VIEW = 'notifications'
 		elif new_view == 'threads':
 			threads_view = generate_threads_view(main_frame)
-			# main_frame_sizer.Add(threads_view, 1, wx.ALL|wx.EXPAND)
+			main_frame_sizer.Add(threads_view, 1, wx.ALL|wx.EXPAND)
 			ACTIVE_VIEW	 = 'threads'
 		main_frame.Layout()
 
@@ -910,8 +974,13 @@ def main():
 	app = create_app()
 	main_frame = generate_main_frame()
 	change_view('scraping')
+	# def otherloop():
+	# 	while True:
+	# 		print('hello')
+	# 		time.sleep(1)
+	# thread = threading.Thread(None, otherloop)
+	# thread.start()
 	app.MainLoop()
-
 
 if __name__ == "__main__":
 	main()

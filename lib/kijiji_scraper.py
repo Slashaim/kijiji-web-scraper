@@ -21,9 +21,6 @@ import time
 global VIEWED_AD_IDS
 VIEWED_AD_IDS = set()
 
-global CLIENT_SESSION
-CLIENT_SESSION = None
-
 global NORMAL_AD_CLASS
 global TOP_AD_CLASS
 global THIRD_PARTY_TOP_AD_CLASS
@@ -63,6 +60,9 @@ NUM_PAGES_PER_CYCLE = 5
 
 global CONNECTION_TIMEOUT
 CONNECTION_TIMEOUT = 5
+
+global MAX_SCRAPE_TIME
+MAX_SCRAPE_TIME = 10
 
 """-----------------------------------------------------------------------------
 
@@ -327,10 +327,11 @@ def get_ad_entries_from_constraints(parameters, list_check):
 						ad_entries.append(ad)
 						current_ad_ids.add(ad_id)
 						VIEWED_AD_IDS.add(ad_id)
-	# runs post_proc callable on list and returns result
-	print('FULL TIME:' + str(time.perf_counter() - start))
+		current_time = time.perf_counter() - start
+		if current_time >= MAX_SCRAPE_TIME:
+			break
+	# runs post_proc callable on list and returns resul
 	return post_proc(ad_entries)
-
 
 
 def main():
