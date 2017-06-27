@@ -72,27 +72,27 @@ HARD_MAX_AD_NUMBER = 50
 # for i in range(0, 30):
 # 	AD_ENTRIES.append(DUMMY)
 
-dummy_notification = {
-	'notification_type': 'newad',
-	'front_text': 'New Ad',
-	'notification_title': 'Title Here',
-	'ad_price': 500.2,
-	'ad_title': 'foo',
-	'ad_url': 'http://website.org'
-}
-other_dummy_notification = {
-	'notification_type': 'newad',
-	'front_text': 'New Ad',
-	'notification_title': 'dlajfkl',
-	'ad_price': 'iuebn',
-	'ad_title': 'foo',
-	'ad_url': 'http://website.org'
-}
-for i in range(0, 30):
-	if i % 2 == 0:
-		NOTIFICATION_ENTRIES.append(dummy_notification)
-	else:
-		NOTIFICATION_ENTRIES.append(other_dummy_notification)
+# dummy_notification = {
+# 	'notification_type': 'newad',
+# 	'front_text': 'New Ad',
+# 	'notification_title': 'Title Here',
+# 	'ad_price': 500.2,
+# 	'ad_title': 'foo',
+# 	'ad_url': 'http://website.org'
+# }
+# other_dummy_notification = {
+# 	'notification_type': 'newad',
+# 	'front_text': 'New Ad',
+# 	'notification_title': 'dlajfkl',
+# 	'ad_price': 'iuebn',
+# 	'ad_title': 'foo',
+# 	'ad_url': 'http://website.org'
+# }
+# for i in range(0, 30):
+# 	if i % 2 == 0:
+# 		NOTIFICATION_ENTRIES.append(dummy_notification)
+# 	else:
+# 		NOTIFICATION_ENTRIES.append(other_dummy_notification)
 
 global USER_PRODUCT_NAME
 global USER_MAX_ADS
@@ -294,12 +294,8 @@ def create_product_name_text_box(parent):
 	GUI_ELEMENTS['product_name_text_box'] = text_box
 	return text_box
 
-def only_new_checkbox_callback(arg):
-	print("Checkbox event fired")
-
 def create_only_new_checkbox(parent):
 	checkbox = wx.CheckBox(parent, wx.ID_ANY, "Only scrape new ads")
-	checkbox.Bind(wx.EVT_CHECKBOX, only_new_checkbox_callback)
 	GUI_ELEMENTS['only_new_checkbox'] = checkbox
 	return checkbox
 
@@ -588,6 +584,16 @@ def create_tracker_product_name_text_box(parent):
 	GUI_ELEMENTS['tracker_product_name_text_box'] = text_box
 	return text_box
 
+def create_tracker_max_price_text_box_label(parent):
+	label = wx.StaticText(parent, wx.ID_ANY, "Max Price:", style = wx.TE_READONLY|wx.TE_CENTRE|wx.BORDER_NONE)
+	return label
+
+def create_tracker_max_price_text_box(parent):
+	global GUI_ELEMENTS
+	text_box = wx.TextCtrl(parent, wx.ID_ANY)
+	GUI_ELEMENTS['tracker_max_price_text_box'] = text_box
+	return text_box
+
 def create_tracker_location_choice(parent):
 	global GUI_ELEMENTS
 	global VALID_LOCATIONS
@@ -600,6 +606,7 @@ def tracker_button_callback(arg):
 	global GUI_ELEMENTS
 	global TRACKER_ENTRIES
 	tracker_product_name_text_box = GUI_ELEMENTS['tracker_product_name_text_box']
+	tracker_max_price_text_box = GUI_ELEMENTS['tracker_max_price_text_box']
 	tracker_location_choice = GUI_ELEMENTS['tracker_location_choice']
 	tracker_message = GUI_ELEMENTS['tracker_message']
 	# setting initial gui state
@@ -608,15 +615,21 @@ def tracker_button_callback(arg):
 	tracker_message.SetValue('')
 	# getting initial gui state and checking for valid inputs
 	given_product_name = tracker_product_name_text_box.GetLineText(lineNo = 0)
+	given_max_price = get_max_price(max_price_text_box.GetLineText(lineNo = 0))
 	given_location = tracker_location_choice.GetSelection()
 	location = UI_TO_LOCATION.get(location_choice.GetString(given_location))
 	if not valid_product_name(given_product_name):
-		scrape_message.SetValue('Invalid product name. Only alphabetical and numeric characters are supported.')
-		tracker_product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
-		tracker_product_name_text_box.Refresh()
+		product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
+		product_name_text_box.Refresh()
+		tracker_message.SetValue('Invalid product name. Only alphabetical and numeric characters are supported.')
+		return
+	if given_max_price is False:
+		tracker_max_price_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
+		tracker_max_price_text_box.Refresh()
+		tracker_message.SetValue('Invalid maximum price.')
 		return
 	if not location:
-		scrape_message.SetValue('Invalid location.')
+		tracker_message.SetValue('Invalid location.')
 		return
 	# adding new tracker
 	add_tracker_entry({
@@ -632,6 +645,12 @@ def create_tracker_button(parent):
 	GUI_ELEMENTS['tracker_button'] = button
 	return button
 
+def create_show_tray_notifications_checkbox(parent):
+	global GUI_ELEMENTS
+	checkbox = wx.CheckBox(parent, wx.ID_ANY, "Show Tray Notifications")
+	GUI_ELEMENTS['show_tray_notifications'] = checkbox
+	return checkbox
+
 def create_tracker_message(parent):
 	global GUI_ELEMENTS
 	label = wx.TextCtrl(parent, wx.ID_ANY, "", style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_MULTILINE|wx.TE_NO_VSCROLL)
@@ -646,22 +665,32 @@ def generate_trackers_options(parent):
 	trackers_options_sizer = create_trackers_options_sizer()
 	trackers_options_panel.SetSizer(trackers_options_sizer)
 	subpanel_1 = create_trackers_options_sub_panel(trackers_options_panel)
+	subpanel_2 = create_trackers_options_sub_panel(trackers_options_panel)
 	horiz_sizer_1 = create_trackers_options_sub_panel_sizer()
+	horiz_sizer_2 = create_trackers_options_sub_panel_sizer()
 	subpanel_1.SetSizer(horiz_sizer_1)
+	subpanel_2.SetSizer(horiz_sizer_2)
 	# creating elements
 	trackers_label = create_trackers_label(trackers_options_panel)
 	tracker_product_name_text_box_label = create_tracker_product_name_text_box_label(subpanel_1)
 	tracker_product_name_text_box = create_tracker_product_name_text_box(subpanel_1)
+	tracker_max_price_text_box_label = create_tracker_max_price_text_box_label(subpanel_2)
+	tracker_max_price_text_box = create_tracker_max_price_text_box(subpanel_2)
 	tracker_location_choice = create_tracker_location_choice(trackers_options_panel)
 	tracker_button = create_tracker_button(trackers_options_panel)
+	show_tray_notifications_checkbox = create_show_tray_notifications_checkbox(trackers_options_panel)
 	tracker_message = create_tracker_message(trackers_options_panel)
 	# putting in sizers
 	horiz_sizer_1.Add(tracker_product_name_text_box_label, 0, wx.TOP|wx.EXPAND, 4)
 	horiz_sizer_1.Add(tracker_product_name_text_box, 1, wx.LEFT|wx.EXPAND, 5)
+	horiz_sizer_2.Add(tracker_max_price_text_box_label, 0, wx.TOP|wx.EXPAND, 4)
+	horiz_sizer_2.Add(tracker_max_price_text_box, 1, wx.LEFT|wx.EXPAND, 5)
 	trackers_options_sizer.Add(trackers_label, 0, wx.ALL|wx.EXPAND)
 	trackers_options_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
+	trackers_options_sizer.Add(subpanel_2, 0, wx.ALL|wx.EXPAND, 5)
 	trackers_options_sizer.Add(tracker_location_choice, 0, wx.ALL|wx.EXPAND, 5)
 	trackers_options_sizer.Add(tracker_button, 0, wx.ALL|wx.EXPAND, 5)
+	trackers_options_sizer.Add(show_tray_notifications_checkbox, 0, wx.ALL|wx.EXPAND, 5)
 	trackers_options_sizer.Add(tracker_message, 0, wx.ALL|wx.EXPAND, 5)
 	GUI_ELEMENTS['trackers_options_panel'] = trackers_options_panel
 	return trackers_options_panel
@@ -998,6 +1027,14 @@ def update_scrape_view():
 	main_frame_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
 	main_frame.Layout()
 
+def show_scrape_view():
+	global GUI_ELEMENTS
+	GUI_ELEMENTS['scrape_view_panel'].Show()
+
+def hide_scrape_view():
+	global GUI_ELEMENTS
+	GUI_ELEMENTS['scrape_view_panel'].Hide()
+
 
 """-----------------------------------------------------------------------------
 
@@ -1177,6 +1214,14 @@ def update_notifications_view():
 	main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
 	main_frame.Layout()
 
+def show_notifications_view():
+	global GUI_ELEMENTS
+	GUI_ELEMENTS['notifications_view_panel'].Show()
+
+def hide_notifications_view():
+	global GUI_ELEMENTS
+	GUI_ELEMENTS['notifications_view_panel'].Hide()
+
 
 """-----------------------------------------------------------------------------
 
@@ -1229,6 +1274,14 @@ def destroy_trackers_view():
 	global GUI_ELEMENTS
 	GUI_ELEMENTS['trackers_view_panel'].Destroy()
 
+def show_trackers_view():
+	global GUI_ELEMENTS
+	GUI_ELEMENTS['trackers_view_panel'].Show()
+
+def hide_trackers_view():
+	global GUI_ELEMENTS
+	GUI_ELEMENTS['trackers_view_panel'].Hide()
+
 
 """-----------------------------------------------------------------------------
 
@@ -1265,30 +1318,44 @@ def generate_main_frame():
 	
 -----------------------------------------------------------------------------"""
 
+def instantiate_all_views():
+	global GUI_ELEMENTS
+	main_frame = GUI_ELEMENTS['main_frame']
+	main_frame_sizer = GUI_ELEMENTS['main_frame_sizer']
+	scrape_view = generate_scrape_view(main_frame)
+	notifications_view = generate_notifications_view(main_frame)
+	trackers_view = generate_trackers_view(main_frame)
+	main_frame_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
+	main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
+	main_frame_sizer.Add(trackers_view, 1, wx.ALL|wx.EXPAND)
+
+def hide_all_views():
+	hide_scrape_view()
+	hide_notifications_view()
+	hide_trackers_view()
+
 def change_view(new_view):
+	global GUI_ELEMENTS
 	global ACTIVE_VIEW
 	if new_view != ACTIVE_VIEW:
 		if ACTIVE_VIEW == 'scraping':
-			destroy_scrape_view()
+			hide_scrape_view()
 		elif ACTIVE_VIEW == 'notifications':
-			destroy_notifications_view()
+			hide_notifications_view()
 		elif ACTIVE_VIEW == 'trackers':
-			destroy_trackers_view()
+			hide_trackers_view()
 		# create new view and display relevant options
 		main_frame = GUI_ELEMENTS['main_frame']
 		main_frame_sizer = GUI_ELEMENTS['main_frame_sizer']
 		change_options_panel_state(new_view)
 		if new_view == 'scraping':
-			scrape_view = generate_scrape_view(main_frame)
-			main_frame_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
+			show_scrape_view()
 			ACTIVE_VIEW = 'scraping'
 		elif new_view == 'notifications':
-			notifications_view = generate_notifications_view(main_frame)
-			main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
+			show_notifications_view()
 			ACTIVE_VIEW = 'notifications'
 		elif new_view == 'trackers':
-			trackers_view = generate_trackers_view(main_frame)
-			main_frame_sizer.Add(trackers_view, 1, wx.ALL|wx.EXPAND)
+			show_trackers_view()
 			ACTIVE_VIEW	 = 'trackers'
 		main_frame.Layout()
 
@@ -1296,6 +1363,8 @@ def change_view(new_view):
 def main():
 	app = create_app()
 	main_frame = generate_main_frame()
+	instantiate_all_views()
+	hide_all_views()
 	change_view('scraping')
 	# def otherloop():
 	# 	while True:
