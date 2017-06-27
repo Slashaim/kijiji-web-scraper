@@ -24,9 +24,10 @@ global GUI_ELEMENTS
 global VALID_LOCATIONS
 global AD_ENTRIES
 global NOTIFICATION_ENTRIES
-global THREADS_ENTRIES
+global TRACKER_ENTRIES
 global ACTIVE_VIEW
 global UI_TO_LOCATION
+global LOCATION_TO_UI
 global HARD_MAX_AD_NUMBER
 
 GUI_ELEMENTS = {}
@@ -36,11 +37,15 @@ VALID_LOCATIONS = [
 ]
 AD_ENTRIES = []
 NOTIFICATION_ENTRIES = []
-THREADS_ENTRIES = []
+TRACKER_ENTRIES = []
 ACTIVE_VIEW = None
 UI_TO_LOCATION = {
 	'All of Toronto (GTA)': 'all-of-toronto',
 	'City of Toronto': 'city-of-toronto'
+}
+LOCATION_TO_UI = {
+	'all-of-toronto': 'All of Toronto (GTA)',
+	'city-of-toronto': 'City of Toronto'
 }
 HARD_MAX_AD_NUMBER = 50
 
@@ -167,6 +172,16 @@ def convert_html_class_to_display(arg):
 	else:
 		return ''
 
+def get_notification_title_from_newad(entry):
+	product_name = entry.get('product_name')
+	location = LOCATION_TO_UI[entry.get('location')]
+	given_max_price = entry.get('max_price')
+	max_price = convert_price_to_display(given_max_price)
+	if given_max_price:
+		return product_name + ' in ' + location + ' under ' + max_price
+	else:
+		return product_name + ' in ' + location
+
 
 """-----------------------------------------------------------------------------
 
@@ -213,12 +228,12 @@ def create_notifications_mode_button(parent):
 	button.Bind(wx.EVT_BUTTON, notifications_mode_button_callback)
 	return button
 
-def threads_mode_button_callback(arg):
-	change_view('threads')
+def trackers_mode_button_callback(arg):
+	change_view('trackers')
 
-def create_threads_mode_button(parent):
-	button = wx.Button(parent, wx.ID_ANY, "Threads View")
-	button.Bind(wx.EVT_BUTTON, threads_mode_button_callback)
+def create_trackers_mode_button(parent):
+	button = wx.Button(parent, wx.ID_ANY, "Trackers View")
+	button.Bind(wx.EVT_BUTTON, trackers_mode_button_callback)
 	return button
 
 def generate_views_options(parent):
@@ -231,12 +246,12 @@ def generate_views_options(parent):
 	views_label = create_views_label(views_panel)
 	scrape_mode_button = create_scrape_mode_button(views_panel)
 	notifications_mode_button = create_notifications_mode_button(views_panel)
-	threads_mode_button = create_threads_mode_button(views_panel)
+	trackers_mode_button = create_trackers_mode_button(views_panel)
 	# adding to sizer
 	views_sizer.Add(views_label, 0, wx.ALL|wx.EXPAND)
 	views_sizer.Add(scrape_mode_button, 0, wx.ALL|wx.EXPAND, 5)
 	views_sizer.Add(notifications_mode_button, 0, wx.ALL|wx.EXPAND, 5)
-	views_sizer.Add(threads_mode_button, 0, wx.ALL|wx.EXPAND, 5)
+	views_sizer.Add(trackers_mode_button, 0, wx.ALL|wx.EXPAND, 5)
 	GUI_ELEMENTS['views_options_panel'] = views_panel
 	return views_panel
 
@@ -539,115 +554,226 @@ def generate_notifications_options(parent):
 
 """-----------------------------------------------------------------------------
 
-	Threads Options creation
+	Trackers Options creation
 	
 -----------------------------------------------------------------------------"""
 
-def create_threads_options_sizer():
+def create_trackers_options_sizer():
 	sizer = wx.BoxSizer(wx.VERTICAL)
 	return sizer
 
-def create_threads_options_panel(parent):
+def create_trackers_options_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
 	return panel
 
-def create_threads_options_sub_panel_sizer():
+def create_trackers_options_sub_panel_sizer():
 	sizer = wx.BoxSizer(wx.HORIZONTAL)
 	return sizer
 
-def create_threads_options_sub_panel(parent):
+def create_trackers_options_sub_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
 	return panel
 
-def create_threads_label(parent):
-	label = wx.StaticText(parent, wx.ID_ANY, "Threads", style = wx.TE_READONLY|wx.TE_CENTRE|wx.BORDER_NONE)
+def create_trackers_label(parent):
+	label = wx.StaticText(parent, wx.ID_ANY, "Trackers", style = wx.TE_READONLY|wx.TE_CENTRE|wx.BORDER_NONE)
 	return label
 
-def create_thread_product_name_text_box_label(parent):
+def create_tracker_product_name_text_box_label(parent):
 	label = wx.StaticText(parent, wx.ID_ANY, "Product Name:", style = wx.TE_READONLY|wx.TE_CENTRE|wx.BORDER_NONE)
 	return label
 
-def create_thread_product_name_text_box(parent):
+def create_tracker_product_name_text_box(parent):
 	global GUI_ELEMENTS
 	text_box = wx.TextCtrl(parent, wx.ID_ANY)
-	GUI_ELEMENTS['thread_product_name_text_box'] = text_box
+	GUI_ELEMENTS['tracker_product_name_text_box'] = text_box
 	return text_box
 
-def create_thread_location_choice(parent):
+def create_tracker_location_choice(parent):
 	global GUI_ELEMENTS
 	global VALID_LOCATIONS
 	choice = wx.Choice(parent, wx.ID_ANY, choices = VALID_LOCATIONS)
 	choice.SetSelection(0)
-	GUI_ELEMENTS['thread_location_choice'] = choice
+	GUI_ELEMENTS['tracker_location_choice'] = choice
 	return choice
 
-def thread_button_callback(arg):
-	print('thread button pressed')
-
-def create_thread_button(parent):
+def tracker_button_callback(arg):
 	global GUI_ELEMENTS
-	button = wx.Button(parent, wx.ID_ANY, "Create New Thread")
-	button.Bind(wx.EVT_BUTTON, thread_button_callback)
-	GUI_ELEMENTS['thread_button'] = button
+	global TRACKER_ENTRIES
+	tracker_product_name_text_box = GUI_ELEMENTS['tracker_product_name_text_box']
+	tracker_location_choice = GUI_ELEMENTS['tracker_location_choice']
+	tracker_message = GUI_ELEMENTS['tracker_message']
+	# setting initial gui state
+	tracker_product_name_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
+	tracker_product_name_text_box.Refresh()
+	tracker_message.SetValue('')
+	# getting initial gui state and checking for valid inputs
+	given_product_name = tracker_product_name_text_box.GetLineText(lineNo = 0)
+	given_location = tracker_location_choice.GetSelection()
+	location = UI_TO_LOCATION.get(location_choice.GetString(given_location))
+	if not valid_product_name(given_product_name):
+		scrape_message.SetValue('Invalid product name. Only alphabetical and numeric characters are supported.')
+		tracker_product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
+		tracker_product_name_text_box.Refresh()
+		return
+	if not location:
+		scrape_message.SetValue('Invalid location.')
+		return
+	# adding new tracker
+	add_tracker_entry({
+		'product_name': given_product_name,
+		'location': location,
+		'cycle_time': 900
+	})
+
+def create_tracker_button(parent):
+	global GUI_ELEMENTS
+	button = wx.Button(parent, wx.ID_ANY, "Create New Tracker")
+	button.Bind(wx.EVT_BUTTON, tracker_button_callback)
+	GUI_ELEMENTS['tracker_button'] = button
 	return button
 
-def generate_threads_options(parent):
+def create_tracker_message(parent):
+	global GUI_ELEMENTS
+	label = wx.TextCtrl(parent, wx.ID_ANY, "", style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_MULTILINE|wx.TE_NO_VSCROLL)
+	label.SetBackgroundColour(wx.Colour(240,240,240))
+	GUI_ELEMENTS['tracker_message'] = label
+	return label
+
+def generate_trackers_options(parent):
 	global GUI_ELEMENTS
 	# creating panels and setting sizers
-	threads_options_panel = create_threads_options_panel(parent)
-	threads_options_sizer = create_threads_options_sizer()
-	threads_options_panel.SetSizer(threads_options_sizer)
-	subpanel_1 = create_threads_options_sub_panel(threads_options_panel)
-	horiz_sizer_1 = create_threads_options_sub_panel_sizer()
+	trackers_options_panel = create_trackers_options_panel(parent)
+	trackers_options_sizer = create_trackers_options_sizer()
+	trackers_options_panel.SetSizer(trackers_options_sizer)
+	subpanel_1 = create_trackers_options_sub_panel(trackers_options_panel)
+	horiz_sizer_1 = create_trackers_options_sub_panel_sizer()
 	subpanel_1.SetSizer(horiz_sizer_1)
 	# creating elements
-	threads_label = create_threads_label(threads_options_panel)
-	thread_product_name_text_box_label = create_thread_product_name_text_box_label(subpanel_1)
-	thread_product_name_text_box = create_thread_product_name_text_box(subpanel_1)
-	thread_location_choice = create_thread_location_choice(threads_options_panel)
-	thread_button = create_thread_button(threads_options_panel)
+	trackers_label = create_trackers_label(trackers_options_panel)
+	tracker_product_name_text_box_label = create_tracker_product_name_text_box_label(subpanel_1)
+	tracker_product_name_text_box = create_tracker_product_name_text_box(subpanel_1)
+	tracker_location_choice = create_tracker_location_choice(trackers_options_panel)
+	tracker_button = create_tracker_button(trackers_options_panel)
+	tracker_message = create_tracker_message(trackers_options_panel)
 	# putting in sizers
-	horiz_sizer_1.Add(thread_product_name_text_box_label, 0, wx.TOP|wx.EXPAND, 4)
-	horiz_sizer_1.Add(thread_product_name_text_box, 1, wx.LEFT|wx.EXPAND, 5)
-	threads_options_sizer.Add(threads_label, 0, wx.ALL|wx.EXPAND)
-	threads_options_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
-	threads_options_sizer.Add(thread_location_choice, 0, wx.ALL|wx.EXPAND, 5)
-	threads_options_sizer.Add(thread_button, 0, wx.ALL|wx.EXPAND, 5)
-	GUI_ELEMENTS['threads_options_panel'] = threads_options_panel
-	return threads_options_panel
+	horiz_sizer_1.Add(tracker_product_name_text_box_label, 0, wx.TOP|wx.EXPAND, 4)
+	horiz_sizer_1.Add(tracker_product_name_text_box, 1, wx.LEFT|wx.EXPAND, 5)
+	trackers_options_sizer.Add(trackers_label, 0, wx.ALL|wx.EXPAND)
+	trackers_options_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
+	trackers_options_sizer.Add(tracker_location_choice, 0, wx.ALL|wx.EXPAND, 5)
+	trackers_options_sizer.Add(tracker_button, 0, wx.ALL|wx.EXPAND, 5)
+	trackers_options_sizer.Add(tracker_message, 0, wx.ALL|wx.EXPAND, 5)
+	GUI_ELEMENTS['trackers_options_panel'] = trackers_options_panel
+	return trackers_options_panel
 
 
 """-----------------------------------------------------------------------------
 
-	Threads Options actions
+	Trackers Options actions
 	
 -----------------------------------------------------------------------------"""
 
-def add_thread_entry(thread_dict):
-	global THREADS_ENTRIES
+def add_tracker_entry(tracker_dict):
+	global TRACKER_ENTRIES
 	entry = {
-		'product_name': thread_dict.get('product_name'),
-		'location': thread_dict.get('location_name'),
+		'product_name': tracker_dict.get('product_name'),
+		'location': tracker_dict.get('location'),
+		'max_price': tracker_dict.get('max_price'),
 		'start_time': time.perf_counter(),
 		'last_scrape_time': 0,
 		'active_time': 0,
 		'time_to_next_scrape': 0,
-		'cycle_time': thread_dict.get('cycle_time'),
-		'scrape_on_next': False
+		'cycle_time': tracker_dict.get('cycle_time'),
+		'scrape_on_next': False,
+		'viewed_ad_ids': set()
 	}
-	THREADS_ENTRIES.append(entry)
+	TRACKER_ENTRIES.append(entry)
 
-def time_update_thread_entries():
-	global THREADS_ENTRIES
-	for entry in THREADS_ENTRIES:
-		current_time = time.perf_counter()
-		start_time = entry['start_time']
-		last_scrape_time = entry['last_scrape_time']
-		cycle_time = entry['cycle_time']
-		entry['active_time'] = current_time - start_time
-		entry['time_to_next_scrape'] = (last_scrape_time + cycle_time) - current_time
-		if (current_time - last_scrape_time) > cycle_time:
-			entry['scrape_on_next'] = True
+def time_update_tracker_entry(entry):
+	current_time = time.perf_counter()
+	start_time = entry['start_time']
+	last_scrape_time = entry['last_scrape_time']
+	cycle_time = entry['cycle_time']
+	entry['active_time'] = current_time - start_time
+	entry['time_to_next_scrape'] = (last_scrape_time + cycle_time) - current_time
+	if (current_time - last_scrape_time) > cycle_time:
+		entry['scrape_on_next'] = True
+
+def get_new_ads_for_notifications(entry):
+	product_name = entry.get('product_name')
+	location = entry.get('location')
+	max_price = entry.get('max_price')
+	viewed_ad_ids = entry.get('viewed_ad_ids')
+	def list_check(li):
+		for entry in li:
+			if entry in viewed_ad_ids:
+				return True
+		return False
+
+	def post_proc(li):
+		return [x for x in li if x['ad_id'] not in viewed_ad_ids]
+
+	def entry_incl(ad):
+		# determining if class allowed
+		html_class = ad.get('html_class')
+		class_allowed = html_class == 'normal'
+		# determining if price allowed
+		price_allowed = True
+		price = ad.get('price')
+		if given_max_price:
+			try:
+				price_allowed = price <= given_max_price
+			except TypeError:
+				price_allowed = False
+		return class_allowed and price_allowed
+	try:
+		ads = kijiji_scraper.get_ad_entries_from_constraints(
+			parameters = {
+				'product_name': product_name,
+				'location': location,
+				'show_top_ads': False,
+				'show_third_party_ads': False,
+				'only_new_ads': True,
+				'post_proc': post_proc
+			},
+			list_check = list_check
+		)
+		return ads
+	except asyncio.TimeoutError:
+		return []
+
+# may need to do this in a separate thread
+def ad_update_tracker_entry(entry):
+	global ACTIVE_VIEW
+	global NOTIFICATION_ENTRIES
+	product_name = entry['product_name']
+	location = LOCATION_TO_UI[entry['location']]
+	viewed_ads = entry['viewed_ads']
+	given_max_price = entry.get('max_price')
+	max_price = convert_price_to_display(entry.get('max_price'))
+	scrape_on_next = entry['scrape_on_next']
+	if scrape_on_next:
+		ads = get_new_ads_for_notifications(entry)
+		for ad in ads:
+			viewed_ads.add(ad)
+			notification_title = get_notification_title_from_newad(ad)
+			ad_price = convert_price_to_display(ad.get('price'))
+			ad_title = ad.get('title')
+			ad_url = ad.get('url')
+			NOTIFICATION_ENTRIES.append({
+				'notification_type': 'newad',
+				'front_text': 'New Ad',
+				'notification_title': notification_title,
+				'ad_price': ad_price,
+				'ad_title': ad_title,
+				'ad_url': ad_url
+			})
+		if len(ads) > 0: 
+			# if SEND_TRAY_NOTIFICATIONS
+			if ACTIVE_VIEW == 'notifications':
+				update_notifications_view()
+
+
 
 
 
@@ -696,9 +822,9 @@ def change_options_panel_state(new_view):
 	elif new_view == 'notifications':
 		notifications_options = generate_notifications_options(options_panel)
 		options_sizer.Add(notifications_options, 0, wx.ALL|wx.EXPAND)
-	elif new_view == 'threads':
-		threads_options = generate_threads_options(options_panel)
-		options_sizer.Add(threads_options, 0, wx.ALL|wx.EXPAND)
+	elif new_view == 'trackers':
+		trackers_options = generate_trackers_options(options_panel)
+		options_sizer.Add(trackers_options, 0, wx.ALL|wx.EXPAND)
 
 
 """-----------------------------------------------------------------------------
@@ -900,11 +1026,13 @@ def create_notifications_panel(parent):
 	GUI_ELEMENTS['notifications_panel'] = panel
 	return panel
 
-def create_notification_header_text(parent):
+def create_notifications_header_text(parent):
+	global GUI_ELEMENTS
 	global NOTIFICATION_ENTRIES
 	num_notifications = len(NOTIFICATION_ENTRIES)
 	displayed = str(num_notifications) + ' notifications found.'
 	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.BORDER_NONE|wx.TE_READONLY)
+	GUI_ELEMENTS['notifications_header_text'] = text
 	return text
 
 def create_notification_panel_sizer():
@@ -925,11 +1053,14 @@ def create_notification_sub_panel(parent):
 
 def notification_remove_notification_button_callback_generator(panel, entry):
 	def callback(arg):
+		global GUI_ELEMENTS
 		global NOTIFICATION_ENTRIES
 		panel.Destroy()
 		NOTIFICATION_ENTRIES.remove(entry)
-		update_notifications_view()
-		print("remove notification button pressed")
+		num_notifications = len(NOTIFICATION_ENTRIES)
+		displayed = str(num_notifications) + ' notifications found.'
+		GUI_ELEMENTS['notifications_header_text'].SetValue(displayed)
+		GUI_ELEMENTS['main_frame'].Layout()
 	return callback
 
 def create_notification_remove_notification_button(parent, panel, entry):
@@ -1025,12 +1156,12 @@ def generate_notifications_view(parent):
 	notifications_panel_sizer = create_notifications_panel_sizer()
 	notifications_panel = create_notifications_panel(notifications_view_panel)
 	notifications_panel.SetSizer(notifications_panel_sizer)
-	notifications_header = create_notification_header_text(notifications_view_panel)
+	notifications_header = create_notifications_header_text(notifications_view_panel)
 	notifications_view_sizer.Add(notifications_header, 0, wx.ALL|wx.EXPAND, 5)
 	notifications_view_sizer.Add(notifications_panel, 1, wx.ALL|wx.EXPAND, 5)
 	for entry in NOTIFICATION_ENTRIES:
 		notification_panel = generate_notification(notifications_panel, entry)
-		notifications_panel_sizer.Add(notification_panel, 0, wx.ALL|wx.EXPAND, 5)
+		notifications_panel_sizer.Prepend(notification_panel, 0, wx.ALL|wx.EXPAND, 5)
 	return notifications_view_panel
 
 def destroy_notifications_view():
@@ -1049,54 +1180,55 @@ def update_notifications_view():
 
 """-----------------------------------------------------------------------------
 
-	Threads View creation
+	Trackers View creation
 
 -----------------------------------------------------------------------------"""
 
-def create_threads_view_sizer():
+def create_trackers_view_sizer():
 	sizer = wx.BoxSizer(wx.VERTICAL)
 	return sizer
 
-def create_threads_view_panel(parent):
+def create_trackers_view_panel(parent):
 	global GUI_ELEMENTS
 	panel = wx.Panel(parent, wx.ID_ANY)
-	GUI_ELEMENTS['threads_view_panel'] = panel
+	GUI_ELEMENTS['trackers_view_panel'] = panel
 	return panel
 
-def create_threads_panel_sizer():
+def create_trackers_panel_sizer():
 	sizer = wx.BoxSizer(wx.VERTICAL)
 	return sizer
 
-def create_threads_panel(parent):
+def create_trackers_panel(parent):
 	global GUI_ELEMENTS
 	panel = wx.ScrolledCanvas(parent, wx.ID_ANY, style = wx.VSCROLL)
 	panel.SetScrollbars(1, 40, 1, 40)
-	GUI_ELEMENTS['threads_panel'] = panel
+	GUI_ELEMENTS['trackers_panel'] = panel
 	return panel
 
-def create_threads_header_text(parent):
-	global THREADS_ENTRIES
-	num_threads = len(THREADS_ENTRIES)
-	displayed = str(num_threads) + ' running threads found.'
+def create_trackers_header_text(parent):
+	global TRACKER_ENTRIES
+	num_trackers = len(TRACKER_ENTRIES)
+	displayed = str(num_trackers) + ' running trackers found.'
 	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.BORDER_NONE|wx.TE_READONLY)
 	return text
 
-def generate_threads_view(parent):
-	global THREADS_ENTRIES
-	threads_view_sizer = create_threads_view_sizer()
-	threads_view_panel = create_threads_view_panel(parent)
-	threads_view_panel.SetSizer(threads_view_sizer)
-	threads_panel_sizer = create_threads_panel_sizer()
-	threads_panel = create_threads_panel(threads_view_panel)
-	threads_panel.SetSizer(threads_panel_sizer)
-	threads_header = create_threads_header_text(threads_view_panel)
-	threads_view_sizer.Add(threads_header, 0, wx.ALL|wx.EXPAND, 5)
-	threads_view_sizer.Add(threads_panel, 1, wx.ALL|wx.EXPAND, 5)
-	return threads_view_panel
+def generate_trackers_view(parent):
+	global TRACKER_ENTRIES
+	trackers_view_sizer = create_trackers_view_sizer()
+	trackers_view_panel = create_trackers_view_panel(parent)
+	trackers_view_panel.SetSizer(trackers_view_sizer)
+	trackers_panel_sizer = create_trackers_panel_sizer()
+	trackers_panel = create_trackers_panel(trackers_view_panel)
+	trackers_panel.SetSizer(trackers_panel_sizer)
+	trackers_header = create_trackers_header_text(trackers_view_panel)
+	trackers_view_sizer.Add(trackers_header, 0, wx.ALL|wx.EXPAND, 5)
+	trackers_view_sizer.Add(trackers_panel, 1, wx.ALL|wx.EXPAND, 5)
+	return trackers_view_panel
 
-def destroy_threads_view():
+def destroy_trackers_view():
 	global GUI_ELEMENTS
-	GUI_ELEMENTS['threads_view_panel'].Destroy()
+	GUI_ELEMENTS['trackers_view_panel'].Destroy()
+
 
 """-----------------------------------------------------------------------------
 
@@ -1140,8 +1272,8 @@ def change_view(new_view):
 			destroy_scrape_view()
 		elif ACTIVE_VIEW == 'notifications':
 			destroy_notifications_view()
-		elif ACTIVE_VIEW == 'threads':
-			destroy_threads_view()
+		elif ACTIVE_VIEW == 'trackers':
+			destroy_trackers_view()
 		# create new view and display relevant options
 		main_frame = GUI_ELEMENTS['main_frame']
 		main_frame_sizer = GUI_ELEMENTS['main_frame_sizer']
@@ -1154,10 +1286,10 @@ def change_view(new_view):
 			notifications_view = generate_notifications_view(main_frame)
 			main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
 			ACTIVE_VIEW = 'notifications'
-		elif new_view == 'threads':
-			threads_view = generate_threads_view(main_frame)
-			main_frame_sizer.Add(threads_view, 1, wx.ALL|wx.EXPAND)
-			ACTIVE_VIEW	 = 'threads'
+		elif new_view == 'trackers':
+			trackers_view = generate_trackers_view(main_frame)
+			main_frame_sizer.Add(trackers_view, 1, wx.ALL|wx.EXPAND)
+			ACTIVE_VIEW	 = 'trackers'
 		main_frame.Layout()
 
 
