@@ -14,15 +14,14 @@ import asyncio
 import aiohttp
 import time
 
+import client_state
+
 
 """-----------------------------------------------------------------------------
 
 	Globals
 
 -----------------------------------------------------------------------------"""
-
-global VIEWED_AD_IDS
-VIEWED_AD_IDS = set()
 
 global NORMAL_AD_CLASS
 global TOP_AD_CLASS
@@ -108,23 +107,6 @@ def generate_page_url_from_url_elements(url_elements, page_num):
 		return 'http://kijiji.ca/' + location_name + '/' + product_name + '/' + page_number + '/' + location_code
 	else:
 		raise IndexError("Page number must be a positive integer.")
-
-
-# return coroutine that requests pages <start> through <end>
-def routine_ad_page_information_page_range(parameters, start, end):
-	name = parameters.get('product_name')
-	location = parameters.get('location')
-	info_list = parameters.get('info_list')
-	if start <= end:
-		li = [get_ad_page_information(
-			name = name,
-			location = location,
-			page_num = x,
-			info_list = info_list
-		) for x in range(start, end + 1)]
-		return asyncio.gather(*li)
-	else:
-		raise ValueError('Start page num must be less than end page num.')
 
 
 """-----------------------------------------------------------------------------
@@ -281,6 +263,21 @@ async def get_ad_page_information(name, location, page_num, info_list):
 	}
 	info_list.append(new_entry)
 
+# return coroutine that requests pages <start> through <end>
+def routine_ad_page_information_page_range(parameters, start, end, info_list):
+	name = parameters.get('product_name')
+	location = parameters.get('location')
+	if start <= end:
+		li = [get_ad_page_information(
+			name = name,
+			location = location,
+			page_num = x,
+			info_list = info_list
+		) for x in range(start, end + 1)]
+		return asyncio.gather(*li)
+	else:
+		raise ValueError('Start page num must be less than end page num.')
+
 
 """-----------------------------------------------------------------------------
 
@@ -288,10 +285,17 @@ async def get_ad_page_information(name, location, page_num, info_list):
 
 -----------------------------------------------------------------------------"""
 
+def get_ads_from_ad_list(ad_list, current_ids, incl_func):
+	li = [ad for ad in ad_list if incl_func(ad)]
+	for ad in li:
+		ad_id = ad['ad_id']
+		current_ids.add(ad_id)
+	return li
+
 # generates list of ad entries based on parameters, mandatory list_check callable,
 # and optional filter and post-processing callables
 def get_ad_entries_from_constraints(parameters, list_check):
-	global VIEWED_AD_IDS
+	global MAX_SCRAPE_TIME
 	global NUM_PAGES_PER_CYCLE
 	# initialising function-level vars
 	ad_entries = []
@@ -303,49 +307,51 @@ def get_ad_entries_from_constraints(parameters, list_check):
 	end_page_num = start_page_num + num_pages_per_cycle - 1
 	product_name = parameters.get('product_name')
 	location = parameters.get('location')
-	show_top_ads = parameters.get('show_top_ads')
-	show_third_party_ads = parameters.get('show_third_party_ads')
-	only_new_ads = parameters.get('only_new_ads')
 	entry_incl = parameters.get('entry_incl')
+	entry_break = parameters.get('entry_break')
 	post_proc = parameters.get('post_proc')
 	entry_incl = entry_incl if entry_incl is not None else lambda x:True
+	entry_break = entry_break if entry_break is not None else lambda x:False
 	post_proc = post_proc if post_proc is not None else lambda x:x
+	# loop sentinels
 	is_final_page = False
+	process_time_out = False
+	forced_entry_break = False
 	test_cycle = 1
-	# stops GET when list_check returns True or previous_ad_found
+	def incl_function(ad):
+		ad_id = ad['ad_id']
+		return (ad_id not in current_ad_ids) and entry_incl(ad)
+	# stops GET when list_check returns True or on final page
 	start = time.perf_counter()
-	while (not list_check(ad_entries)) and (not is_final_page):
+	while (not list_check(ad_entries)) and (not is_final_page) and (not process_time_out) and (not forced_entry_break):
 		print('ON CYCLE: ' + str(test_cycle))
 		test_cycle += 1
-		# get ads from page puts information from pages into info_list
-		# page order is not guaranteed, depending on order coroutines finish
+		# get ad information and sorts
 		info_list = []
-		parameters['info_list'] = info_list
 		loop = asyncio.get_event_loop()
-		routine = routine_ad_page_information_page_range(parameters, start_page_num, end_page_num)
+		routine = routine_ad_page_information_page_range(parameters, start_page_num, end_page_num, info_list)
 		loop.run_until_complete(routine)
 		start_page_num += num_pages_per_cycle
 		end_page_num += num_pages_per_cycle
-		# sorts list of ads by page and iterates through
 		info_list.sort(key = lambda x:x['bottom_bar_information']['page_num'])
+		# iterates through list of ads
 		for ad_page_information in info_list:
 			normal_ads = ad_page_information['normal_ads']
 			top_ads = ad_page_information['top_ads']
 			third_party_ads = ad_page_information['third_party_ads']
 			ad_list = top_ads + normal_ads + third_party_ads
 			is_final_page = ad_page_information['bottom_bar_information']['is_final_page']
-			# iterate and append if not in set and entry_incl returns True
-			for ad in ad_list:
-				ad_id = ad['ad_id']
-				if (ad_id not in current_ad_ids) and entry_incl(ad):
-					if not (only_new_ads and ad_id in VIEWED_AD_IDS):
-						ad_entries.append(ad)
-						current_ad_ids.add(ad_id)
-						VIEWED_AD_IDS.add(ad_id)
+			ad_page = get_ads_from_ad_list(
+				ad_list = ad_list,
+				current_ids = current_ad_ids,
+				incl_func = incl_function
+			)
+			early_break_check = map(entry_break, ad_page)
+			forced_entry_break = any(early_break_check)
+			ad_entries.extend(ad_page)
+		# time check
 		current_time = time.perf_counter() - start
-		if current_time >= MAX_SCRAPE_TIME:
-			break
-	# runs post_proc callable on list and returns resul
+		process_time_out = current_time >= MAX_SCRAPE_TIME
 	return post_proc(ad_entries)
 
 

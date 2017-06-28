@@ -183,22 +183,37 @@ def scrape_button_callback(arg):
 				price_allowed = False
 		return class_allowed and price_allowed
 
+	def entry_break(ad):
+		is_normal_ad = ad['html_class'] == 'normal'
+		has_been_seen = ad['ad_id'] in client_state.viewed_ad_ids
+		return only_new_ads and is_normal_ad and has_been_seen
+
 	def post_proc(ad_list):
-		return ad_list[:given_max_ads]
+		if only_new_ads:
+			last_index = None
+			for index, ad in enumerate(ad_list):
+				if ad['ad_id'] in client_state.viewed_ad_ids:
+					last_index = index
+					break
+			last_index = min(last_index, given_max_ads)
+			return ad_list[:last_index]
+		else:
+			return ad_list[:given_max_ads]
 
 	try:
 		client_state.ad_entries = kijiji_scraper.get_ad_entries_from_constraints(
 			parameters = {
 				'product_name': given_product_name,
 				'location': location,
-				'show_top_ads': show_top_ads,
-				'show_third_party_ads': show_third_party_ads,
 				'only_new_ads': only_new_ads,
 				'entry_incl': entry_incl,
+				'entry_break': entry_break,
 				'post_proc': post_proc		
 			},
 			list_check = list_check
 		)
+		for ad in client_state.ad_entries:
+			client_state.viewed_ad_ids.add(ad['ad_id'])
 		update_scrape_view()
 	except asyncio.TimeoutError:
 		scrape_message.SetValue('Connection timed out. Check internet connectivity or try again later.')
