@@ -190,7 +190,7 @@ def scrape_button_callback(arg):
 
 	def post_proc(ad_list):
 		if only_new_ads:
-			last_index = None
+			last_index = 0
 			for index, ad in enumerate(ad_list):
 				if ad['ad_id'] in client_state.viewed_ad_ids:
 					last_index = index

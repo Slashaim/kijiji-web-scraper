@@ -339,7 +339,7 @@ def get_ad_entries_from_constraints(parameters, list_check):
 			normal_ads = ad_page_information['normal_ads']
 			top_ads = ad_page_information['top_ads']
 			third_party_ads = ad_page_information['third_party_ads']
-			ad_list = top_ads + normal_ads + third_party_ads
+			ad_list = normal_ads + top_ads + third_party_ads
 			is_final_page = ad_page_information['bottom_bar_information']['is_final_page']
 			ad_page = get_ads_from_ad_list(
 				ad_list = ad_list,
