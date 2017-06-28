@@ -9,6 +9,7 @@
 import wx
 import re
 import time
+import datetime
 import asyncio
 import threading
 
@@ -18,6 +19,14 @@ import client_state
 
 global USER_SHOW_TRAY_NOTIFICATIONS
 USER_SHOW_TRAY_NOTIFICATIONS = False
+
+for i in range(0, 30):
+	client_state.tracker_entries.append({
+		'product_name': str(i),
+		'location': 'city-of-toronto',
+		'max_price': None,
+		'cycle_time': 1800
+	})
 
 """-----------------------------------------------------------------------------
 
@@ -295,7 +304,138 @@ def create_trackers_header_text(parent):
 	num_trackers = len(client_state.tracker_entries)
 	displayed = str(num_trackers) + ' running trackers found.'
 	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.BORDER_NONE|wx.TE_READONLY)
+	client_state.gui_elements['trackers_header_text'] = text
 	return text
+
+def create_tracker_panel_sizer():
+	sizer = wx.BoxSizer(wx.VERTICAL)
+	return sizer
+
+def create_tracker_horizontal_sizer():
+	sizer = wx.BoxSizer(wx.HORIZONTAL)
+	return sizer
+
+def create_tracker_panel(parent):
+	panel = wx.Panel(parent, wx.ID_ANY)
+	return panel
+
+def create_tracker_sub_panel(parent):
+	panel = wx.Panel(parent, wx.ID_ANY)
+	return panel
+
+def create_tracker_product_name(parent, name):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	text = wx.TextCtrl(parent, wx.ID_ANY, name, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
+	text.SetBackgroundColour(wx.Colour(240,240,240))
+	text.SetStyle(0, 500, attr)
+	return text
+
+def create_tracker_location(parent, location):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	text = wx.TextCtrl(parent, wx.ID_ANY, location, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
+	text.SetBackgroundColour(wx.Colour(240,240,240))
+	text.SetStyle(0, 500, attr)
+	return text
+
+def create_tracker_max_price(parent, max_price):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	text = wx.TextCtrl(parent, wx.ID_ANY, max_price, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
+	text.SetBackgroundColour(wx.Colour(240,240,240))
+	text.SetStyle(0, 500, attr)
+	return text
+
+def create_tracker_active_time_label(parent):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	text = wx.TextCtrl(parent, wx.ID_ANY, "Active Time:", style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
+	text.SetBackgroundColour(wx.Colour(240,240,240))
+	text.SetStyle(0, 500, attr)
+	return text
+
+def create_tracker_active_time(parent, ad_entry):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	text = wx.TextCtrl(parent, wx.ID_ANY, "", style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
+	text.SetBackgroundColour(wx.Colour(240,240,240))
+	text.SetStyle(0, 500, attr)
+	ad_entry['gui_active_time'] = text
+	return text
+
+def create_tracker_scrape_time_label(parent):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	text = wx.TextCtrl(parent, wx.ID_ANY, "Time to next scrape:", style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
+	text.SetBackgroundColour(wx.Colour(240,240,240))
+	text.SetStyle(0, 500, attr)
+	return text
+
+def create_tracker_scrape_time(parent, ad_entry):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	text = wx.TextCtrl(parent, wx.ID_ANY, "", style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
+	text.SetBackgroundColour(wx.Colour(240,240,240))
+	text.SetStyle(0, 500, attr)
+	ad_entry['gui_scrape_time'] = text
+	return text
+
+def tracker_remove_tracker_button_callback_generator(panel, entry):
+	def callback(arg):
+		panel.Destroy()
+		client_state.tracker_entries.remove(entry)
+		num_trackers = len(client_state.tracker_entries)
+		displayed = str(num_trackers) + ' running trackers found.'
+		client_state.gui_elements['trackers_header_text'].SetValue(displayed)
+		client_state.gui_elements['main_frame'].Layout()
+	return callback
+
+def create_remove_tracker_button(parent, panel, entry):
+	button = wx.Button(parent, wx.ID_ANY, "Remove Tracker")
+	callback = tracker_remove_tracker_button_callback_generator(panel, entry)
+	button.Bind(wx.EVT_BUTTON, callback)
+	return button
+
+def generate_tracker(parent, tracker_dict):
+	product_name = tracker_dict.get('product_name')
+	location = client_state.location_to_ui[tracker_dict['location']]
+	max_price = helpers.convert_price_to_display(tracker_dict.get('max_price')) or ""
+	# creating panels and setting sizers
+	tracker_panel = create_tracker_panel(parent)
+	tracker_panel_sizer = create_tracker_panel_sizer()
+	tracker_panel.SetSizer(tracker_panel_sizer)
+	subpanel_1 = create_tracker_sub_panel(tracker_panel)
+	subpanel_2 = create_tracker_sub_panel(tracker_panel)
+	subpanel_3 = create_tracker_sub_panel(tracker_panel)
+	horiz_sizer_1 = create_tracker_horizontal_sizer()
+	horiz_sizer_2 = create_tracker_horizontal_sizer()
+	horiz_sizer_3 = create_tracker_horizontal_sizer()
+	subpanel_1.SetSizer(horiz_sizer_1)
+	subpanel_2.SetSizer(horiz_sizer_2)
+	subpanel_3.SetSizer(horiz_sizer_3)
+	# creating elements
+	tracker_product_name = create_tracker_product_name(subpanel_1, product_name)
+	tracker_location = create_tracker_location(subpanel_1, location)
+	tracker_max_price = create_tracker_max_price(subpanel_1, max_price)
+	tracker_active_time_label = create_tracker_active_time_label(subpanel_2)
+	tracker_active_time = create_tracker_active_time(subpanel_2, tracker_dict)
+	tracker_scrape_time_label = create_tracker_scrape_time_label(subpanel_2)
+	tracker_scrape_time = create_tracker_scrape_time(subpanel_2, tracker_dict)
+	remove_tracker_button = create_remove_tracker_button(subpanel_3, tracker_panel, tracker_dict)
+	# putting in sizers
+	horiz_sizer_1.Add(tracker_product_name, 2, wx.ALL|wx.EXPAND)
+	horiz_sizer_1.Add(tracker_location, 1, wx.ALL|wx.EXPAND)
+	horiz_sizer_1.Add(tracker_max_price, 1, wx.ALL|wx.EXPAND)
+	horiz_sizer_2.Add(tracker_active_time_label, 1, wx.ALL|wx.EXPAND)
+	horiz_sizer_2.Add(tracker_active_time, 2, wx.ALL|wx.EXPAND)
+	horiz_sizer_2.Add(tracker_scrape_time_label, 1, wx.ALL|wx.EXPAND)
+	horiz_sizer_2.Add(tracker_scrape_time, 2, wx.ALL|wx.EXPAND)
+	horiz_sizer_3.Add(remove_tracker_button, 0, wx.ALL|wx.EXPAND)
+	tracker_panel_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
+	tracker_panel_sizer.Add(subpanel_2, 0, wx.ALL|wx.EXPAND, 5)
+	tracker_panel_sizer.Add(subpanel_3, 0, wx.ALL|wx.EXPAND, 5)
+	return tracker_panel
 
 def generate_trackers_view(parent):
 	trackers_view_sizer = create_trackers_view_sizer()
@@ -307,6 +447,9 @@ def generate_trackers_view(parent):
 	trackers_header = create_trackers_header_text(trackers_view_panel)
 	trackers_view_sizer.Add(trackers_header, 0, wx.ALL|wx.EXPAND, 5)
 	trackers_view_sizer.Add(trackers_panel, 1, wx.ALL|wx.EXPAND, 5)
+	for entry in client_state.tracker_entries:
+		tracker = generate_tracker(trackers_panel, entry)
+		trackers_panel_sizer.Add(tracker, 0, wx.ALL|wx.EXPAND, 5)
 	return trackers_view_panel
 
 def destroy_trackers_view():
