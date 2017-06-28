@@ -2,8 +2,10 @@
 
 	kijiji_scraper
 
------------------------------------------------------------------------------"""
+	This module is responsible for sending requests to kijiji and parsing those
+	requests into usable data.
 
+-----------------------------------------------------------------------------"""
 
 import lxml
 import lxml.html
@@ -11,6 +13,7 @@ import requests
 import asyncio
 import aiohttp
 import time
+
 
 """-----------------------------------------------------------------------------
 
@@ -64,6 +67,7 @@ CONNECTION_TIMEOUT = 5
 global MAX_SCRAPE_TIME
 MAX_SCRAPE_TIME = 10
 
+
 """-----------------------------------------------------------------------------
 
 	Helper Functions
@@ -104,6 +108,30 @@ def generate_page_url_from_url_elements(url_elements, page_num):
 		return 'http://kijiji.ca/' + location_name + '/' + product_name + '/' + page_number + '/' + location_code
 	else:
 		raise IndexError("Page number must be a positive integer.")
+
+
+# return coroutine that requests pages <start> through <end>
+def routine_ad_page_information_page_range(parameters, start, end):
+	name = parameters.get('product_name')
+	location = parameters.get('location')
+	info_list = parameters.get('info_list')
+	if start <= end:
+		li = [get_ad_page_information(
+			name = name,
+			location = location,
+			page_num = x,
+			info_list = info_list
+		) for x in range(start, end + 1)]
+		return asyncio.gather(*li)
+	else:
+		raise ValueError('Start page num must be less than end page num.')
+
+
+"""-----------------------------------------------------------------------------
+
+	Parse html Content
+
+-----------------------------------------------------------------------------"""
 
 def get_ads_from_page(tree, class_name):
 	ads = tree.findall('.//div[@class=' + class_name + ']')
@@ -196,21 +224,6 @@ def get_bottom_bar_information(tree):
 		'is_final_page': is_final_page
 	}
 
-def routine_ad_page_information_page_range(parameters, start, end):
-	name = parameters.get('product_name')
-	location = parameters.get('location')
-	info_list = parameters.get('info_list')
-	if start <= end:
-		li = [get_ad_page_information(
-			name = name,
-			location = location,
-			page_num = x,
-			info_list = info_list
-		) for x in range(start, end)]
-		return asyncio.gather(*li)
-	else:
-		raise ValueError('Start page num must be less than end page num.')
-
 
 """-----------------------------------------------------------------------------
 
@@ -285,7 +298,9 @@ def get_ad_entries_from_constraints(parameters, list_check):
 	current_ad_ids = set()
 	start_page_num = 1
 	# reading in parameters and assigning defaults
-	end_page_num = start_page_num + NUM_PAGES_PER_CYCLE
+	num_pages_per_cycle = parameters.get('num_pages_per_cycle')
+	num_pages_per_cycle = num_pages_per_cycle if num_pages_per_cycle is not None else NUM_PAGES_PER_CYCLE
+	end_page_num = start_page_num + num_pages_per_cycle - 1
 	product_name = parameters.get('product_name')
 	location = parameters.get('location')
 	show_top_ads = parameters.get('show_top_ads')
@@ -309,8 +324,8 @@ def get_ad_entries_from_constraints(parameters, list_check):
 		loop = asyncio.get_event_loop()
 		routine = routine_ad_page_information_page_range(parameters, start_page_num, end_page_num)
 		loop.run_until_complete(routine)
-		start_page_num += NUM_PAGES_PER_CYCLE
-		end_page_num += NUM_PAGES_PER_CYCLE
+		start_page_num += num_pages_per_cycle
+		end_page_num += num_pages_per_cycle
 		# sorts list of ads by page and iterates through
 		info_list.sort(key = lambda x:x['bottom_bar_information']['page_num'])
 		for ad_page_information in info_list:
