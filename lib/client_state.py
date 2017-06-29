@@ -29,3 +29,5 @@ notification_entries = []
 tracker_entries = []
 
 viewed_ad_ids = set()
+
+app_open = True

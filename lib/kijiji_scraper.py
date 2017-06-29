@@ -13,6 +13,7 @@ import requests
 import asyncio
 import aiohttp
 import time
+import threading
 
 import client_state
 
@@ -328,7 +329,8 @@ def get_ad_entries_from_constraints(parameters, list_check):
 		test_cycle += 1
 		# get ad information and sorts
 		info_list = []
-		loop = asyncio.get_event_loop()
+		loop = asyncio.new_event_loop()
+		asyncio.set_event_loop(loop)
 		routine = routine_ad_page_information_page_range(parameters, start_page_num, end_page_num, info_list)
 		loop.run_until_complete(routine)
 		start_page_num += num_pages_per_cycle
@@ -356,21 +358,26 @@ def get_ad_entries_from_constraints(parameters, list_check):
 
 
 def main():
-	ad_entries = get_ad_entries_from_constraints(
-		{
-			'product_name': 'dafsf',
-			'location': 'city-of-toronto',
-			'show_top_ads': False,
-			'show_third_party_ads': False,
-			'only_new_ads': False,
-			'entry_incl': lambda x:True,
-			'post_proc': lambda x:x[:50]
-		},
-		list_check = lambda x: len(x) >= 50,
-	)
-	for ad in ad_entries:
-		title = ad.get('title')
-		print(title)
+	def foo():
+		ad_entries = get_ad_entries_from_constraints(
+			{
+				'product_name': 'dafsf',
+				'location': 'city-of-toronto',
+				'show_top_ads': False,
+				'show_third_party_ads': False,
+				'only_new_ads': False,
+				'entry_incl': lambda x:True,
+				'post_proc': lambda x:x[:50]
+			},
+			list_check = lambda x: len(x) >= 50,
+		)
+		for ad in ad_entries:
+			title = ad.get('title')
+			print(title)
+	thread_1 = threading.Thread(None, target = foo)
+	thread_2 = threading.Thread(None, target = foo)
+	thread_1.start()
+	thread_2.start()
 
 
 

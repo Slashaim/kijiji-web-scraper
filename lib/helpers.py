@@ -9,6 +9,18 @@
 import re
 
 
+def clamp(val, minimum = None, maximum = None):
+	if minimum and maximum:
+		if minimum > maximum:
+			raise ValueError('Minimum must be less than or equal to maximum.')
+		return min(maximum, max(val, minimum))
+	elif minimum:
+		return max(val, minimum)
+	elif maximum:
+		return min(val, maximum)
+	else:
+		return val
+
 """-----------------------------------------------------------------------------
 
 	Checks
@@ -67,7 +79,10 @@ def convert_price_to_display(arg):
 		else:
 			return '$' + str(nearest_cent)
 	except TypeError:
-		return arg
+		if arg is None:
+			return ''
+		else:
+			return arg
 
 def convert_html_class_to_display(arg):
 	if arg == 'normal':

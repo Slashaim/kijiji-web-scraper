@@ -20,13 +20,6 @@ import client_state
 global USER_SHOW_TRAY_NOTIFICATIONS
 USER_SHOW_TRAY_NOTIFICATIONS = False
 
-for i in range(0, 30):
-	client_state.tracker_entries.append({
-		'product_name': str(i),
-		'location': 'city-of-toronto',
-		'max_price': None,
-		'cycle_time': 1800
-	})
 
 """-----------------------------------------------------------------------------
 
@@ -202,6 +195,14 @@ def time_update_tracker_entry(entry):
 	if (current_time - last_scrape_time) > cycle_time:
 		entry['scrape_on_next'] = True
 
+def gui_update_tracker_entry(entry):
+	clamped_active_time = helpers.clamp(entry['active_time'], minimum = 0)
+	formatted_active_time = str(datetime.timedelta(seconds = round(clamped_active_time)))
+	entry['gui_active_time'].SetValue(formatted_active_time)
+	clamped_time_to_next_scrape = helpers.clamp(entry['time_to_next_scrape'], minimum = 0)
+	formatted_time_to_next_scrape = str(datetime.timedelta(seconds = round(clamped_time_to_next_scrape)))
+	entry['gui_scrape_time'].SetValue(formatted_time_to_next_scrape)
+
 def get_new_ads_for_notifications(entry):
 	product_name = entry.get('product_name')
 	location = entry.get('location')
@@ -274,6 +275,18 @@ def ad_update_tracker_entry(entry):
 				pass
 			if client_state.active_view == 'notifications':
 				pass
+
+def create_tracker_time_update_thread():
+	def time_update_loop():
+		while client_state.app_open:
+			for entry in client_state.tracker_entries:
+				time_update_tracker_entry(entry)
+				gui_update_tracker_entry(entry)
+			time.sleep(0.8)
+	thread = threading.Thread(None, target = time_update_loop)
+	thread.start()
+
+
 
 """-----------------------------------------------------------------------------
 
@@ -400,7 +413,7 @@ def create_remove_tracker_button(parent, panel, entry):
 def generate_tracker(parent, tracker_dict):
 	product_name = tracker_dict.get('product_name')
 	location = client_state.location_to_ui[tracker_dict['location']]
-	max_price = helpers.convert_price_to_display(tracker_dict.get('max_price')) or ""
+	max_price = helpers.convert_price_to_display(tracker_dict.get('max_price'))
 	# creating panels and setting sizers
 	tracker_panel = create_tracker_panel(parent)
 	tracker_panel_sizer = create_tracker_panel_sizer()
@@ -460,3 +473,12 @@ def show_trackers_view():
 
 def hide_trackers_view():
 	client_state.gui_elements['trackers_view_panel'].Hide()
+
+for i in range(0, 30):
+	kwargs = {
+		'product_name': str(i),
+		'location': 'city-of-toronto',
+		'max_price': None,
+		'cycle_time': 1800
+	}
+	add_tracker_entry(kwargs)

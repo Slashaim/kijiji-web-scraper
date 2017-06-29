@@ -27,6 +27,9 @@ import client_state
 
 def create_app():
 	app = wx.App(False)
+	def app_on_exit():
+		client_state.app_open = False
+	app.OnExit = app_on_exit
 	return app
 
 
@@ -219,12 +222,7 @@ def main():
 	instantiate_all_views()
 	hide_all_views()
 	change_view('scraping')
-	# def otherloop():
-	# 	while True:
-	# 		print('hello')
-	# 		time.sleep(1)
-	# thread = threading.Thread(None, otherloop)
-	# thread.start()
+	trackers.create_tracker_time_update_thread()
 	app.MainLoop()
 
 if __name__ == "__main__":
