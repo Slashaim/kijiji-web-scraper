@@ -106,6 +106,7 @@ def tracker_button_callback(arg):
 		'cycle_time': 900
 	})
 
+
 def create_tracker_button(parent):
 	button = wx.Button(parent, wx.ID_ANY, "Create New Tracker")
 	button.Bind(wx.EVT_BUTTON, tracker_button_callback)
@@ -170,12 +171,62 @@ def generate_trackers_options(parent):
 	
 -----------------------------------------------------------------------------"""
 
+def get_new_ads_for_tracker(entry):
+	product_name = entry.get('product_name')
+	location = entry.get('location')
+	max_price = entry.get('max_price')
+	viewed_ad_ids = entry.get('viewed_ad_ids')
+	def list_check(li):
+		return len(li) >= 10
+
+	def post_proc(li):
+		return [x for x in li if x['ad_id'] not in viewed_ad_ids][:10]
+
+	def entry_incl(ad):
+		# determining if class allowed
+		html_class = ad.get('html_class')
+		class_allowed = html_class == 'normal'
+		# determining if price allowed
+		price_allowed = True
+		price = ad.get('price')
+		if max_price:
+			try:
+				price_allowed = price <= max_price
+			except TypeError:
+				price_allowed = False
+		return class_allowed and price_allowed
+
+	def entry_break(ad):
+		return ad['ad_id'] in viewed_ad_ids
+
+	try:
+		ads = kijiji_scraper.get_ad_entries_from_constraints(
+			parameters = {
+				'product_name': product_name,
+				'location': location,
+				'show_top_ads': False,
+				'show_third_party_ads': False,
+				'only_new_ads': True,
+				'entry_incl': entry_incl,
+				'entry_break': entry_break,
+				'post_proc': post_proc,
+				'num_pages_per_cycle': 1
+			},
+			list_check = list_check
+		)
+		entry['last_scrape_time'] = time.perf_counter()
+		for ad in ads:
+			viewed_ad_ids.add(ad['ad_id'])
+		return ads
+	except asyncio.TimeoutError:
+		return []
+
 def add_tracker_entry(tracker_dict):
 	entry = {
 		'product_name': tracker_dict.get('product_name'),
 		'location': tracker_dict.get('location'),
 		'max_price': tracker_dict.get('max_price'),
-		'start_time': time.perf_counter(),
+		'start_time': 0,
 		'last_scrape_time': 0,
 		'active_time': 0,
 		'time_to_next_scrape': 0,
@@ -183,7 +234,11 @@ def add_tracker_entry(tracker_dict):
 		'scrape_on_next': False,
 		'viewed_ad_ids': set()
 	}
+	# initialising new tracker with set of ads
+	get_new_ads_for_tracker(entry)
+	entry['start_time'] = time.perf_counter()
 	client_state.tracker_entries.append(entry)
+	return entry
 
 def time_update_tracker_entry(entry):
 	current_time = time.perf_counter()
@@ -202,49 +257,6 @@ def gui_update_tracker_entry(entry):
 	clamped_time_to_next_scrape = helpers.clamp(entry['time_to_next_scrape'], minimum = 0)
 	formatted_time_to_next_scrape = str(datetime.timedelta(seconds = round(clamped_time_to_next_scrape)))
 	entry['gui_scrape_time'].SetValue(formatted_time_to_next_scrape)
-
-def get_new_ads_for_notifications(entry):
-	product_name = entry.get('product_name')
-	location = entry.get('location')
-	max_price = entry.get('max_price')
-	viewed_ad_ids = entry.get('viewed_ad_ids')
-	def list_check(li):
-		for entry in li:
-			if entry in viewed_ad_ids:
-				return True
-		return False
-
-	def post_proc(li):
-		return [x for x in li if x['ad_id'] not in viewed_ad_ids]
-
-	def entry_incl(ad):
-		# determining if class allowed
-		html_class = ad.get('html_class')
-		class_allowed = html_class == 'normal'
-		# determining if price allowed
-		price_allowed = True
-		price = ad.get('price')
-		if max_price:
-			try:
-				price_allowed = price <= max_price
-			except TypeError:
-				price_allowed = False
-		return class_allowed and price_allowed
-	try:
-		ads = kijiji_scraper.get_ad_entries_from_constraints(
-			parameters = {
-				'product_name': product_name,
-				'location': location,
-				'show_top_ads': False,
-				'show_third_party_ads': False,
-				'only_new_ads': True,
-				'post_proc': post_proc
-			},
-			list_check = list_check
-		)
-		return ads
-	except asyncio.TimeoutError:
-		return []
 
 # may need to do this in a separate thread
 def ad_update_tracker_entry(entry):
@@ -474,7 +486,7 @@ def show_trackers_view():
 def hide_trackers_view():
 	client_state.gui_elements['trackers_view_panel'].Hide()
 
-for i in range(0, 30):
+for i in range(0, 5):
 	kwargs = {
 		'product_name': str(i),
 		'location': 'city-of-toronto',
