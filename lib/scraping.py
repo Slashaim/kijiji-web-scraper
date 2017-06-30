@@ -213,6 +213,7 @@ def scrape_button_callback(arg):
 			list_check = list_check
 		)
 		for ad in client_state.ad_entries:
+			ad['location'] = client_state.location_to_ui.get(ad['location'])
 			client_state.viewed_ad_ids.add(ad['ad_id'])
 		update_scrape_view()
 	except asyncio.TimeoutError:

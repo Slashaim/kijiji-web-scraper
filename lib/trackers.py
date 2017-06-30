@@ -16,10 +16,24 @@ import threading
 import kijiji_scraper
 import helpers
 import client_state
+import notifications
 
-global USER_SHOW_TRAY_NOTIFICATIONS
-USER_SHOW_TRAY_NOTIFICATIONS = False
 
+
+def get_notification_title_from_tracker(entry):
+	product_name = entry['product_name']
+	given_location = entry.get('location')
+	location = client_state.location_to_ui.get(given_location)
+	given_max_price = entry.get('max_price')
+	max_price = helpers.convert_price_to_display(given_max_price)
+	if given_max_price and location:
+		return product_name + ' in ' + location + ' under ' + max_price
+	elif location:
+		return product_name + ' in ' + location
+	elif max_price:
+		return product_name + ' under ' + max_price
+	else:
+		return product_name
 
 """-----------------------------------------------------------------------------
 
@@ -103,7 +117,7 @@ def tracker_button_callback(arg):
 	entry = add_tracker_entry({
 		'product_name': given_product_name,
 		'location': location,
-		'cycle_time': 900,
+		'cycle_time': 15,
 		'max_price': given_max_price
 	})
 	trackers_panel = client_state.gui_elements['trackers_panel']
@@ -225,7 +239,6 @@ def get_new_ads_for_tracker(entry):
 			},
 			list_check = list_check
 		)
-		entry['last_scrape_time'] = time.perf_counter()
 		for ad in ads:
 			viewed_ad_ids.add(ad['ad_id'])
 		return ads
@@ -259,7 +272,6 @@ def init_tracker_viewed_ads(entry):
 			},
 			list_check = list_check
 		)
-		entry['last_scrape_time'] = time.perf_counter()
 		for ad in ads:
 			viewed_ad_ids.add(ad['ad_id'])
 		return ads
@@ -306,35 +318,33 @@ def gui_update_tracker_entry(entry):
 	except KeyError:
 		pass
 
-# may need to do this in a separate thread
 def ad_update_tracker_entry(entry):
-	product_name = entry['product_name']
-	location = client_state.location_to_ui[entry['location']]
-	viewed_ads = entry['viewed_ads']
-	given_max_price = entry.get('max_price')
-	max_price = helpers.convert_price_to_display(entry.get('max_price'))
 	scrape_on_next = entry['scrape_on_next']
 	if scrape_on_next:
-		ads = get_new_ads_for_notifications(entry)
-		for ad in ads:
-			viewed_ads.add(ad)
-			notification_title = get_notification_title_from_newad(ad)
-			ad_price = helpers.convert_price_to_display(ad.get('price'))
-			ad_title = ad.get('title')
-			ad_url = ad.get('url')
-			client_state.notification_entries.append({
-				'notification_type': 'newad',
-				'front_text': 'New Ad',
-				'notification_title': notification_title,
-				'ad_price': ad_price,
-				'ad_title': ad_title,
-				'ad_url': ad_url
-			})
-		if len(ads) > 0: 
-			if USER_SHOW_TRAY_NOTIFICATIONS:
-				pass
-			if client_state.active_view == 'notifications':
-				pass
+		entry['scrape_on_next'] = False
+		entry['last_scrape_time'] = time.perf_counter()
+		# updating the notifications gui in a seprate thread prevents it from hanging
+		def gui_update_func():
+			ads = get_new_ads_for_tracker(entry)
+			for ad in ads:
+				notification_title = get_notification_title_from_tracker(entry)
+				ad_title = ad.get('title')
+				ad_url = ad.get('url')
+				new_notification = {
+					'notification_type': 'newad',
+					'front_text': 'New Ad',
+					'notification_title': notification_title,
+					'ad_price': ad.get('ad_price'),
+					'ad_title': ad_title,
+					'ad_url': ad_url
+				}
+				client_state.notification_entries.append(new_notification)
+			if len(ads) > 0:
+				print('new ads found')
+				if client_state.active_view == 'notifications':
+					notifications.update_notifications_view()
+		thread = threading.Thread(None, target = gui_update_func)
+		thread.start()
 
 def create_tracker_time_update_thread():
 	def time_update_loop():
@@ -344,6 +354,15 @@ def create_tracker_time_update_thread():
 				gui_update_tracker_entry(entry)
 			time.sleep(0.8)
 	thread = threading.Thread(None, target = time_update_loop)
+	thread.start()
+
+def create_tracker_ad_update_thread():
+	def ad_update_loop():
+		while client_state.app_open:
+			for entry in client_state.tracker_entries:
+				ad_update_tracker_entry(entry)
+			time.sleep(1)
+	thread = threading.Thread(None, target = ad_update_loop)
 	thread.start()
 
 

@@ -18,24 +18,6 @@ import client_state
 
 """-----------------------------------------------------------------------------
 
-	Helpers
-
------------------------------------------------------------------------------"""
-
-def get_notification_title_from_newad(entry):
-	product_name = entry.get('product_name')
-	given_location = entry.get('location')
-	location = client_state.location_to_ui[given_location]
-	given_max_price = entry.get('max_price')
-	max_price = helpers.convert_price_to_display(given_max_price)
-	if given_max_price:
-		return product_name + ' in ' + location + ' under ' + max_price
-	else:
-		return product_name + ' in ' + location
-
-
-"""-----------------------------------------------------------------------------
-
 	Notifications Options creation
 	
 -----------------------------------------------------------------------------"""
@@ -94,6 +76,7 @@ def create_notifications_view_panel(parent):
 
 def create_notifications_panel_sizer():
 	sizer = wx.BoxSizer(wx.VERTICAL)
+	client_state.gui_elements['notifications_panel_sizer'] = sizer
 	return sizer
 
 def create_notifications_panel(parent):
@@ -218,6 +201,8 @@ def generate_notification(parent, notification_dict):
 	notification_type = notification_dict.get('notification_type')
 	if notification_type == 'newad':
 		return generate_notification_newad(parent, notification_dict)
+	else:
+		raise ValueError('Invalid notification type: ' + str(notification_type))
 
 def generate_notifications_view(parent):
 	notifications_view_sizer = create_notifications_view_sizer()
@@ -243,6 +228,9 @@ def update_notifications_view():
 	destroy_notifications_view()
 	notifications_view = generate_notifications_view(main_frame)
 	main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
+	num_notifications = len(client_state.notification_entries)
+	displayed = str(num_notifications) + ' notifications found.'
+	client_state.gui_elements['notifications_header_text'].SetValue(displayed)
 	main_frame.Layout()
 
 def show_notifications_view():

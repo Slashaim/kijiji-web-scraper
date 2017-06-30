@@ -198,7 +198,7 @@ def change_view(new_view):
 		if active_view == 'scraping':
 			scraping.hide_scrape_view()
 		elif active_view == 'notifications':
-			notifications.hide_notifications_view()
+			notifications.destroy_notifications_view()
 		elif active_view == 'trackers':
 			trackers.hide_trackers_view()
 		# create new view and display relevant options
@@ -209,7 +209,9 @@ def change_view(new_view):
 			scraping.show_scrape_view()
 			client_state.active_view = 'scraping'
 		elif new_view == 'notifications':
-			notifications.show_notifications_view()
+			notifications_view = notifications.generate_notifications_view(main_frame)
+			main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
+			main_frame.Layout()
 			client_state.active_view = 'notifications'
 		elif new_view == 'trackers':
 			trackers.show_trackers_view()
@@ -224,6 +226,7 @@ def main():
 	hide_all_views()
 	change_view('scraping')
 	trackers.create_tracker_time_update_thread()
+	trackers.create_tracker_ad_update_thread()
 	app.MainLoop()
 
 if __name__ == "__main__":

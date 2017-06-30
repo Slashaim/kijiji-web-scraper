@@ -48,6 +48,7 @@ THIRD_PARTY_NORMAL_AD_CLASS = '''"
 
 global LOCATION_LOOKUP
 LOCATION_LOOKUP = {
+	# toronto (gta)
 	'all-of-toronto': {
 		'name': 'b-gta-greater-toronto-area',
 		'code': 'k0l1700272'
@@ -55,6 +56,22 @@ LOCATION_LOOKUP = {
 	'city-of-toronto': {
 		'name': 'b-city-of-toronto',
 		'code': 'k0l1700273'
+	},
+	'markham-york-region': {
+		'name': 'b-markham-york-region',
+		'code': 'k0l1700274'
+	},
+	'mississauga-peel-region': {
+		'name': 'b-mississauga-peel-region',
+		'code': 'k0l1700276'
+	},
+	'oakville-halton-region': {
+		'name': 'b-oakville-halton-region',
+		'code': 'k0l1700277'
+	},
+	'oshawa-durham-region': {
+		'name': 'b-oshawa-durham-region',
+		'code': 'k0l1700275'
 	}
 }
 
@@ -138,7 +155,7 @@ def get_ads_from_page(tree, class_name):
 		title = raw_title.strip()
 		price = convert_price_text_to_float(raw_price.strip())
 		description = raw_description.strip()
-		location = raw_location.strip()
+		location = client_state.ui_to_location.get(raw_location.strip())
 		date_posted = raw_date_posted.strip()
 		url = 'http://kijiji.ca' + raw_url
 		ad_id = int(raw_ad_id)
@@ -173,7 +190,7 @@ def get_third_party_ads_from_page(tree, class_name):
 		title = raw_title.strip()
 		price = convert_price_text_to_float(raw_price.strip())
 		description = raw_description.strip()
-		location = raw_location.strip()
+		location = client_state.ui_to_location.get(raw_location.strip())
 		date_posted = raw_date_posted.strip()
 		url = 'http://kijiji.ca' + raw_url
 		ad_id = int(raw_ad_id)
@@ -361,8 +378,8 @@ def main():
 	def foo():
 		ad_entries = get_ad_entries_from_constraints(
 			{
-				'product_name': 'dafsf',
-				'location': 'city-of-toronto',
+				'product_name': 'playstation',
+				'location': 'mississauga-peel-region',
 				'show_top_ads': False,
 				'show_third_party_ads': False,
 				'only_new_ads': False,
@@ -374,10 +391,7 @@ def main():
 		for ad in ad_entries:
 			title = ad.get('title')
 			print(title)
-	thread_1 = threading.Thread(None, target = foo)
-	thread_2 = threading.Thread(None, target = foo)
-	thread_1.start()
-	thread_2.start()
+	foo()
 
 
 

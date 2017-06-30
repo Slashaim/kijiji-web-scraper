@@ -10,16 +10,17 @@ import re
 
 
 def clamp(val, minimum = None, maximum = None):
-	if minimum and maximum:
+	if minimum is not None and maximum is not None:
 		if minimum > maximum:
 			raise ValueError('Minimum must be less than or equal to maximum.')
 		return min(maximum, max(val, minimum))
-	elif minimum:
+	elif minimum is not None:
 		return max(val, minimum)
-	elif maximum:
+	elif maximum is not None:
 		return min(val, maximum)
 	else:
 		return val
+
 
 """-----------------------------------------------------------------------------
 
@@ -72,7 +73,7 @@ def get_max_price(arg):
 
 def convert_price_to_display(arg):
 	try:
-		nearest_cent = round(arg, 2)
+		nearest_cent = round(float(arg), 2)
 		cents = arg * 100
 		if cents % 10 == 0:
 			return '$' + str(nearest_cent) + '0'
