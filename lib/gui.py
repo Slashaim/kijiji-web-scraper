@@ -29,6 +29,7 @@ def create_app():
 	app = wx.App(False)
 	def app_on_exit():
 		client_state.app_open = False
+	client_state.gui_elements['app'] = app
 	app.OnExit = app_on_exit
 	return app
 

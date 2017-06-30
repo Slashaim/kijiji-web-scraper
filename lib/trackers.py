@@ -83,9 +83,9 @@ def tracker_button_callback(arg):
 	tracker_message.SetValue('')
 	# getting initial gui state and checking for valid inputs
 	given_product_name = tracker_product_name_text_box.GetLineText(lineNo = 0)
-	given_max_price = helpers.get_max_price(max_price_text_box.GetLineText(lineNo = 0))
+	given_max_price = helpers.get_max_price(tracker_max_price_text_box.GetLineText(lineNo = 0))
 	given_location = tracker_location_choice.GetSelection()
-	location = client_state.ui_to_location.get(location_choice.GetString(given_location))
+	location = client_state.ui_to_location.get(tracker_location_choice.GetString(given_location))
 	if not helpers.valid_product_name(given_product_name):
 		product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
 		product_name_text_box.Refresh()
@@ -100,11 +100,22 @@ def tracker_button_callback(arg):
 		tracker_message.SetValue('Invalid location.')
 		return
 	# adding new tracker
-	add_tracker_entry({
+	entry = add_tracker_entry({
 		'product_name': given_product_name,
 		'location': location,
-		'cycle_time': 900
+		'cycle_time': 900,
+		'max_price': given_max_price
 	})
+	trackers_panel = client_state.gui_elements['trackers_panel']
+	tracker_panel = generate_tracker(trackers_panel, entry)
+	trackers_panel_sizer = client_state.gui_elements['trackers_panel_sizer']
+	trackers_panel_sizer.Add(tracker_panel, 0, wx.ALL|wx.EXPAND, 5)
+	num_trackers = len(client_state.tracker_entries)
+	displayed = str(num_trackers) + ' running trackers found.'
+	client_state.gui_elements['trackers_header_text'].SetValue(displayed)
+	main_frame = client_state.gui_elements['main_frame']
+	main_frame.Layout()
+
 
 
 def create_tracker_button(parent):
@@ -221,6 +232,40 @@ def get_new_ads_for_tracker(entry):
 	except asyncio.TimeoutError:
 		return []
 
+def init_tracker_viewed_ads(entry):
+	product_name = entry.get('product_name')
+	location = entry.get('location')
+	max_price = entry.get('max_price')
+	viewed_ad_ids = entry.get('viewed_ad_ids')
+	def list_check(li):
+		return len(li) >= 1
+
+	def entry_incl(ad):
+		# determining if class allowed
+		html_class = ad.get('html_class')
+		class_allowed = html_class == 'normal'
+		return class_allowed
+
+	try:
+		ads = kijiji_scraper.get_ad_entries_from_constraints(
+			parameters = {
+				'product_name': product_name,
+				'location': location,
+				'show_top_ads': False,
+				'show_third_party_ads': False,
+				'only_new_ads': True,
+				'entry_incl': entry_incl,
+				'num_pages_per_cycle': 1
+			},
+			list_check = list_check
+		)
+		entry['last_scrape_time'] = time.perf_counter()
+		for ad in ads:
+			viewed_ad_ids.add(ad['ad_id'])
+		return ads
+	except asyncio.TimeoutError:
+		return []
+
 def add_tracker_entry(tracker_dict):
 	entry = {
 		'product_name': tracker_dict.get('product_name'),
@@ -235,7 +280,7 @@ def add_tracker_entry(tracker_dict):
 		'viewed_ad_ids': set()
 	}
 	# initialising new tracker with set of ads
-	get_new_ads_for_tracker(entry)
+	init_tracker_viewed_ads(entry)
 	entry['start_time'] = time.perf_counter()
 	client_state.tracker_entries.append(entry)
 	return entry
@@ -251,12 +296,15 @@ def time_update_tracker_entry(entry):
 		entry['scrape_on_next'] = True
 
 def gui_update_tracker_entry(entry):
-	clamped_active_time = helpers.clamp(entry['active_time'], minimum = 0)
-	formatted_active_time = str(datetime.timedelta(seconds = round(clamped_active_time)))
-	entry['gui_active_time'].SetValue(formatted_active_time)
-	clamped_time_to_next_scrape = helpers.clamp(entry['time_to_next_scrape'], minimum = 0)
-	formatted_time_to_next_scrape = str(datetime.timedelta(seconds = round(clamped_time_to_next_scrape)))
-	entry['gui_scrape_time'].SetValue(formatted_time_to_next_scrape)
+	try:
+		clamped_active_time = helpers.clamp(entry['active_time'], minimum = 0)
+		formatted_active_time = str(datetime.timedelta(seconds = round(clamped_active_time)))
+		entry['gui_active_time'].SetValue(formatted_active_time)
+		clamped_time_to_next_scrape = helpers.clamp(entry['time_to_next_scrape'], minimum = 0)
+		formatted_time_to_next_scrape = str(datetime.timedelta(seconds = round(clamped_time_to_next_scrape)))
+		entry['gui_scrape_time'].SetValue(formatted_time_to_next_scrape)
+	except KeyError:
+		pass
 
 # may need to do this in a separate thread
 def ad_update_tracker_entry(entry):
@@ -317,6 +365,7 @@ def create_trackers_view_panel(parent):
 
 def create_trackers_panel_sizer():
 	sizer = wx.BoxSizer(wx.VERTICAL)
+	client_state.gui_elements['trackers_panel_sizer'] = sizer
 	return sizer
 
 def create_trackers_panel(parent):
@@ -480,17 +529,25 @@ def generate_trackers_view(parent):
 def destroy_trackers_view():
 	client_state.gui_elements['trackers_view_panel'].Destroy()
 
+def update_trackers_view():
+	main_frame = client_state.gui_elements['main_frame']
+	main_frame_sizer = client_state.gui_elements['main_frame_sizer']
+	destroy_trackers_view()
+	trackers_view = generate_trackers_view(main_frame)
+	main_frame_sizer.Add(trackers_view, 1, wx.ALL|wx.EXPAND)
+	main_frame.Layout()
+
 def show_trackers_view():
 	client_state.gui_elements['trackers_view_panel'].Show()
 
 def hide_trackers_view():
 	client_state.gui_elements['trackers_view_panel'].Hide()
 
-for i in range(0, 5):
-	kwargs = {
-		'product_name': str(i),
-		'location': 'city-of-toronto',
-		'max_price': None,
-		'cycle_time': 1800
-	}
-	add_tracker_entry(kwargs)
+# for i in range(0, 2):
+# 	kwargs = {
+# 		'product_name': str(i),
+# 		'location': 'city-of-toronto',
+# 		'max_price': None,
+# 		'cycle_time': 1800
+# 	}
+# 	add_tracker_entry(kwargs)
