@@ -84,6 +84,11 @@ def convert_price_to_display(arg):
 			return ''
 		else:
 			return arg
+	except ValueError:
+		if arg is None:
+			return ''
+		else:
+			return arg
 
 def convert_html_class_to_display(arg):
 	if arg == 'normal':

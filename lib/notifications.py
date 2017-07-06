@@ -108,22 +108,6 @@ def create_notification_sub_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
 	return panel
 
-def notification_remove_notification_button_callback_generator(panel, entry):
-	def callback(arg):
-		panel.Destroy()
-		client_state.notification_entries.remove(entry)
-		num_notifications = len(client_state.notification_entries)
-		displayed = str(num_notifications) + ' notifications found.'
-		client_state.gui_elements['notifications_header_text'].SetValue(displayed)
-		client_state.gui_elements['main_frame'].Layout()
-	return callback
-
-def create_notification_remove_notification_button(parent, panel, entry):
-	button = wx.Button(parent, wx.ID_ANY, "Remove Notification")
-	callback = notification_remove_notification_button_callback_generator(panel, entry)
-	button.Bind(wx.EVT_BUTTON, callback)
-	return button
-
 def create_notification_newad_front_text(parent, text):
 	attr = wx.TextAttr()
 	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
@@ -156,11 +140,11 @@ def create_notification_newad_url(parent, url):
 	return text
 
 def generate_notification_newad(parent, notification_dict):
-	front_text = notification_dict.get('front_text')
-	notification_title = notification_dict.get('notification_title')
-	ad_price = helpers.convert_price_to_display(notification_dict.get('ad_price'))
-	ad_title = notification_dict.get('ad_title')
-	ad_url = notification_dict.get('ad_url')
+	front_text = notification_dict.get('front_text') or ''
+	notification_title = notification_dict.get('notification_title') or ''
+	ad_price = helpers.convert_price_to_display(notification_dict.get('ad_price')) or ''
+	ad_title = notification_dict.get('ad_title') or ''
+	ad_url = notification_dict.get('ad_url') or ''
 	# creating panels and setting sizers
 	notification_panel = create_notification_panel(parent)
 	notification_panel_sizer = create_notification_panel_sizer()
@@ -183,18 +167,24 @@ def generate_notification_newad(parent, notification_dict):
 	newad_ad_price = create_notification_newad_price(subpanel_2, ad_price)
 	newad_ad_title = create_notification_newad_adtitle(subpanel_2, ad_title)
 	newad_ad_url = create_notification_newad_url(subpanel_3, ad_url)
-	remove_notification_button = create_notification_remove_notification_button(subpanel_4, notification_panel, notification_dict)
 	# putting in sizers
 	horiz_sizer_1.Add(newad_front_text, 1, wx.ALL|wx.EXPAND)
 	horiz_sizer_1.Add(newad_notification_title, 5, wx.ALL|wx.EXPAND)
 	horiz_sizer_2.Add(newad_ad_price, 1, wx.ALL|wx.EXPAND)
 	horiz_sizer_2.Add(newad_ad_title, 5, wx.ALL|wx.EXPAND)
 	horiz_sizer_3.Add(newad_ad_url, 1, wx.ALL|wx.EXPAND)
-	horiz_sizer_4.Add(remove_notification_button, 0, wx.ALL|wx.EXPAND)
 	notification_panel_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
 	notification_panel_sizer.Add(subpanel_2, 0, wx.ALL|wx.EXPAND, 5)
 	notification_panel_sizer.Add(subpanel_3, 0, wx.ALL|wx.EXPAND, 5)
 	notification_panel_sizer.Add(subpanel_4, 0, wx.ALL|wx.EXPAND, 5)
+	# adding to state
+	client_state.notification_gui_panels.append({
+		'front_text': newad_front_text,
+		'notification_title': newad_notification_title,
+		'ad_price': newad_ad_price,
+		'ad_title': newad_ad_title,
+		'ad_url': newad_ad_url
+	})
 	return notification_panel
 
 def generate_notification(parent, notification_dict):
@@ -214,9 +204,11 @@ def generate_notifications_view(parent):
 	notifications_header = create_notifications_header_text(notifications_view_panel)
 	notifications_view_sizer.Add(notifications_header, 0, wx.ALL|wx.EXPAND, 5)
 	notifications_view_sizer.Add(notifications_panel, 1, wx.ALL|wx.EXPAND, 5)
+	for i in range(0, client_state.num_notifications):
+		notification_panel = generate_notification(notifications_panel, {'notification_type': 'newad'})
+		notifications_panel_sizer.Add(notification_panel, 0, wx.ALL|wx.EXPAND, 5)
 	for entry in client_state.notification_entries:
-		notification_panel = generate_notification(notifications_panel, entry)
-		notifications_panel_sizer.Prepend(notification_panel, 0, wx.ALL|wx.EXPAND, 5)
+		pass
 	return notifications_view_panel
 
 def destroy_notifications_view():

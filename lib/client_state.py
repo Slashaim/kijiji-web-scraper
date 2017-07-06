@@ -41,6 +41,8 @@ location_to_ui = {
 
 ad_entries = []
 notification_entries = []
+notification_gui_panels = []
+num_notifications = 50
 tracker_entries = []
 
 viewed_ad_ids = set()
