@@ -216,7 +216,6 @@ def change_view(new_view):
 			client_state.active_view = 'trackers'
 		main_frame.Layout()
 
-
 def main():
 	app = create_app()
 	main_frame = generate_main_frame()

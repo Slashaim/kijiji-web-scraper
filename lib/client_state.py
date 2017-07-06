@@ -6,6 +6,8 @@
 
 -----------------------------------------------------------------------------"""
 
+import collections
+
 active_view = None
 
 
@@ -40,9 +42,9 @@ location_to_ui = {
 }
 
 ad_entries = []
-notification_entries = []
+max_notifications = 50
 notification_gui_panels = []
-num_notifications = 50
+notification_entries = collections.deque(maxlen = max_notifications)
 tracker_entries = []
 
 viewed_ad_ids = set()

@@ -11,6 +11,7 @@ import re
 import time
 import asyncio
 import threading
+import collections
 
 import helpers
 import client_state
@@ -36,7 +37,7 @@ def create_notifications_label(parent):
 	return label
 
 def clear_all_notifications_button_callback(arg):
-	client_state.notification_entries = []
+	client_state.notification_entries = collections.deque(maxlen = client_state.max_notifications)
 	update_notifications_view()
 
 def create_clear_all_notifications_button(parent):
@@ -187,6 +188,13 @@ def generate_notification_newad(parent, notification_dict):
 	})
 	return notification_panel
 
+
+"""-----------------------------------------------------------------------------
+
+	Public Functions
+
+-----------------------------------------------------------------------------"""
+
 def generate_notification(parent, notification_dict):
 	notification_type = notification_dict.get('notification_type')
 	if notification_type == 'newad':
@@ -204,29 +212,51 @@ def generate_notifications_view(parent):
 	notifications_header = create_notifications_header_text(notifications_view_panel)
 	notifications_view_sizer.Add(notifications_header, 0, wx.ALL|wx.EXPAND, 5)
 	notifications_view_sizer.Add(notifications_panel, 1, wx.ALL|wx.EXPAND, 5)
-	for i in range(0, client_state.num_notifications):
+	for i in range(0, client_state.max_notifications):
 		notification_panel = generate_notification(notifications_panel, {'notification_type': 'newad'})
 		notifications_panel_sizer.Add(notification_panel, 0, wx.ALL|wx.EXPAND, 5)
-	for entry in client_state.notification_entries:
-		pass
+	update_notifications_view()
 	return notifications_view_panel
 
 def destroy_notifications_view():
 	client_state.gui_elements['notifications_view_panel'].Destroy()
 
 def update_notifications_view():
-	main_frame = client_state.gui_elements['main_frame']
-	main_frame_sizer = client_state.gui_elements['main_frame_sizer']
-	destroy_notifications_view()
-	notifications_view = generate_notifications_view(main_frame)
-	main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
+	num_notifications = len(client_state.notification_entries)
+	# updating gui to match notifications
+	for index, entry in enumerate(client_state.notification_entries):
+		gui = client_state.notification_gui_panels[index]
+		gui['front_text'].SetValue(entry['front_text'])
+		gui['notification_title'].SetValue(entry['notification_title'])
+		gui['ad_title'].SetValue(entry['ad_title'])
+		gui['ad_price'].SetValue(entry['ad_price'])
+		gui['ad_url'].SetValue(entry['ad_url'])
+	# gui panels that don't have a corresponding notification are set to blank
+	for index in range(num_notifications, client_state.max_notifications):
+		gui = client_state.notification_gui_panels[index]
+		gui['front_text'].SetValue('')
+		gui['notification_title'].SetValue('')
+		gui['ad_title'].SetValue('')
+		gui['ad_price'].SetValue('')
+		gui['ad_url'].SetValue('')
+	# updating header text to display num of notifications
 	num_notifications = len(client_state.notification_entries)
 	displayed = str(num_notifications) + ' notifications found.'
 	client_state.gui_elements['notifications_header_text'].SetValue(displayed)
-	main_frame.Layout()
+	main_frame = client_state.gui_elements['main_frame'].Layout()
 
 def show_notifications_view():
 	client_state.gui_elements['notifications_view_panel'].Show()
 
 def hide_notifications_view():
 	client_state.gui_elements['notifications_view_panel'].Hide()
+
+for i in range(0, 5):
+	client_state.notification_entries.append({
+		'notification_type': 'newad',
+		'front_text': 'New Ad',
+		'notification_title': 'foo',
+		'ad_price': 'no price given',
+		'ad_title': 'bar',
+		'ad_url': 'http://website.com'
+	})
