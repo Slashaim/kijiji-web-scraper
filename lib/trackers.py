@@ -323,26 +323,23 @@ def ad_update_tracker_entry(entry):
 	if scrape_on_next:
 		entry['scrape_on_next'] = False
 		entry['last_scrape_time'] = time.perf_counter()
-		# updating the notifications gui in a seprate thread prevents it from hanging
+		# updating the notifications gui in a separate thread prevents it from hanging
 		def gui_update_func():
 			ads = get_new_ads_for_tracker(entry)
 			for ad in ads:
 				notification_title = get_notification_title_from_tracker(entry)
-				ad_title = ad.get('title')
-				ad_url = ad.get('url')
+				price = helpers.convert_price_to_display(ad.get('price'))
 				new_notification = {
 					'notification_type': 'newad',
 					'front_text': 'New Ad',
 					'notification_title': notification_title,
-					'ad_price': ad.get('ad_price'),
-					'ad_title': ad_title,
-					'ad_url': ad_url
+					'ad_price': price,
+					'ad_title': ad.get('title'),
+					'ad_url': ad.get('url')
 				}
-				client_state.notification_entries.append(new_notification)
+				client_state.notification_entries.appendleft(new_notification)
 			if len(ads) > 0:
-				print('new ads found')
-				if client_state.active_view == 'notifications':
-					notifications.update_notifications_view()
+				notifications.update_notifications_view()
 		thread = threading.Thread(None, target = gui_update_func)
 		thread.start()
 

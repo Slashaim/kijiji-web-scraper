@@ -109,6 +109,20 @@ def create_notification_sub_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
 	return panel
 
+def remove_notification_callback_gen(entry):
+	def callback(arg):
+		client_state.notification_entries.remove(entry)
+		update_notifications_view()
+	return callback
+
+def create_remove_notification_button(parent, entry):
+	button = wx.Button(parent, wx.ID_ANY, 'Remove Notification')
+	button.Bind(wx.EVT_BUTTON, remove_notification_callback_gen(entry))
+	return button
+
+def update_remove_button_binding(button, entry):
+	button.Bind(wx.EVT_BUTTON, remove_notification_callback_gen(entry))
+
 def create_notification_newad_front_text(parent, text):
 	attr = wx.TextAttr()
 	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
@@ -168,23 +182,28 @@ def generate_notification_newad(parent, notification_dict):
 	newad_ad_price = create_notification_newad_price(subpanel_2, ad_price)
 	newad_ad_title = create_notification_newad_adtitle(subpanel_2, ad_title)
 	newad_ad_url = create_notification_newad_url(subpanel_3, ad_url)
+	remove_notification_button = create_remove_notification_button(subpanel_4, notification_dict)
 	# putting in sizers
 	horiz_sizer_1.Add(newad_front_text, 1, wx.ALL|wx.EXPAND)
 	horiz_sizer_1.Add(newad_notification_title, 5, wx.ALL|wx.EXPAND)
 	horiz_sizer_2.Add(newad_ad_price, 1, wx.ALL|wx.EXPAND)
 	horiz_sizer_2.Add(newad_ad_title, 5, wx.ALL|wx.EXPAND)
 	horiz_sizer_3.Add(newad_ad_url, 1, wx.ALL|wx.EXPAND)
+	horiz_sizer_4.Add(remove_notification_button, 0, wx.ALL|wx.EXPAND)
 	notification_panel_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
 	notification_panel_sizer.Add(subpanel_2, 0, wx.ALL|wx.EXPAND, 5)
 	notification_panel_sizer.Add(subpanel_3, 0, wx.ALL|wx.EXPAND, 5)
 	notification_panel_sizer.Add(subpanel_4, 0, wx.ALL|wx.EXPAND, 5)
+	if front_text ==  '':
+		remove_notification_button.Hide()
 	# adding to state
 	client_state.notification_gui_panels.append({
 		'front_text': newad_front_text,
 		'notification_title': newad_notification_title,
 		'ad_price': newad_ad_price,
 		'ad_title': newad_ad_title,
-		'ad_url': newad_ad_url
+		'ad_url': newad_ad_url,
+		'remove_notification_button': remove_notification_button
 	})
 	return notification_panel
 
@@ -223,6 +242,8 @@ def destroy_notifications_view():
 
 def update_notifications_view():
 	num_notifications = len(client_state.notification_entries)
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
 	# updating gui to match notifications
 	for index, entry in enumerate(client_state.notification_entries):
 		gui = client_state.notification_gui_panels[index]
@@ -231,6 +252,10 @@ def update_notifications_view():
 		gui['ad_title'].SetValue(entry['ad_title'])
 		gui['ad_price'].SetValue(entry['ad_price'])
 		gui['ad_url'].SetValue(entry['ad_url'])
+		gui['front_text'].SetStyle(0, 500, attr)
+		gui['notification_title'].SetStyle(0, 500, attr)
+		update_remove_button_binding(gui['remove_notification_button'], entry)
+		gui['remove_notification_button'].Show()
 	# gui panels that don't have a corresponding notification are set to blank
 	for index in range(num_notifications, client_state.max_notifications):
 		gui = client_state.notification_gui_panels[index]
@@ -239,10 +264,14 @@ def update_notifications_view():
 		gui['ad_title'].SetValue('')
 		gui['ad_price'].SetValue('')
 		gui['ad_url'].SetValue('')
+		gui['remove_notification_button'].Hide()
 	# updating header text to display num of notifications
 	num_notifications = len(client_state.notification_entries)
-	displayed = str(num_notifications) + ' notifications found.'
-	client_state.gui_elements['notifications_header_text'].SetValue(displayed)
+	if num_notifications >= client_state.max_notifications:
+		displayed = str(num_notifications) + ' notifications found. Maximum notifications reached, older notifications deleted.'
+	else:
+		displayed = str(num_notifications) + ' notifications found.'
+		client_state.gui_elements['notifications_header_text'].SetValue(displayed)
 	main_frame = client_state.gui_elements['main_frame'].Layout()
 
 def show_notifications_view():
@@ -251,12 +280,12 @@ def show_notifications_view():
 def hide_notifications_view():
 	client_state.gui_elements['notifications_view_panel'].Hide()
 
-for i in range(0, 5):
-	client_state.notification_entries.append({
-		'notification_type': 'newad',
-		'front_text': 'New Ad',
-		'notification_title': 'foo',
-		'ad_price': 'no price given',
-		'ad_title': 'bar',
-		'ad_url': 'http://website.com'
-	})
+# for i in range(0, 5):
+# 	client_state.notification_entries.append({
+# 		'notification_type': 'newad',
+# 		'front_text': 'New Ad',
+# 		'notification_title': 'foo',
+# 		'ad_price': 'no price given',
+# 		'ad_title': 'bar',
+# 		'ad_url': 'http://website.com'
+# 	})

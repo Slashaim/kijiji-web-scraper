@@ -42,7 +42,7 @@ location_to_ui = {
 }
 
 ad_entries = []
-max_notifications = 50
+max_notifications = 100
 notification_gui_panels = []
 notification_entries = collections.deque(maxlen = max_notifications)
 tracker_entries = []
