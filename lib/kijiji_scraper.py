@@ -9,11 +9,9 @@
 
 import lxml
 import lxml.html
-import requests
 import asyncio
 import aiohttp
 import time
-import threading
 
 import client_state
 
@@ -342,7 +340,7 @@ def get_ad_entries_from_constraints(parameters, list_check):
 	# stops GET when list_check returns True or on final page
 	start = time.perf_counter()
 	while (not list_check(ad_entries)) and (not is_final_page) and (not process_time_out) and (not forced_entry_break):
-		print('ON CYCLE: ' + str(test_cycle))
+		# print('ON CYCLE: ' + str(test_cycle))
 		test_cycle += 1
 		# get ad information and sorts
 		info_list = []
@@ -392,8 +390,6 @@ def main():
 			title = ad.get('title')
 			print(title)
 	foo()
-
-
 
 
 if __name__ == "__main__":

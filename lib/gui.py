@@ -7,12 +7,7 @@
 -----------------------------------------------------------------------------"""
 
 import wx
-import re
-import time
-import asyncio
-import threading
 
-import kijiji_scraper
 import scraping
 import notifications
 import trackers
@@ -216,7 +211,7 @@ def change_view(new_view):
 			client_state.active_view = 'trackers'
 		main_frame.Layout()
 
-def main():
+def instantiate():
 	app = create_app()
 	main_frame = generate_main_frame()
 	instantiate_all_views()
@@ -226,6 +221,9 @@ def main():
 	trackers.create_tracker_time_update_thread()
 	trackers.create_tracker_ad_update_thread()
 	app.MainLoop()
+
+def main():
+	instantiate()
 
 if __name__ == "__main__":
 	main()

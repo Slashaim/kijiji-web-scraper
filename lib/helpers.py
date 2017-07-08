@@ -9,6 +9,12 @@
 import re
 
 
+"""-----------------------------------------------------------------------------
+
+	Math
+	
+-----------------------------------------------------------------------------"""
+
 def clamp(val, minimum = None, maximum = None):
 	if minimum is not None and maximum is not None:
 		if minimum > maximum:
@@ -36,6 +42,13 @@ def valid_product_name(arg):
 		return match is not None
 	except TypeError:
 		return False
+
+
+"""-----------------------------------------------------------------------------
+
+	Input conversions
+	
+-----------------------------------------------------------------------------"""
 
 def get_max_ads(arg):
 	try:
