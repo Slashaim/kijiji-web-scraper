@@ -25,9 +25,6 @@ USER_LOCATION_INDEX = None
 USER_MAX_ADS = None
 USER_MAX_PRICE = None
 
-global HARD_MAX_AD_NUMBER
-HARD_MAX_AD_NUMBER = 50
-
 
 """-----------------------------------------------------------------------------
 
@@ -77,8 +74,7 @@ def create_max_ads_label(parent):
 	return label
 
 def create_max_ads_text_box(parent):
-	global HARD_MAX_AD_NUMBER
-	startingText = str(USER_MAX_ADS or HARD_MAX_AD_NUMBER)
+	startingText = str(USER_MAX_ADS or client_state.max_ads)
 	textbox = wx.TextCtrl(parent, wx.ID_ANY, startingText)
 	client_state.gui_elements['max_ads_text_box'] = textbox
 	return textbox
@@ -142,10 +138,10 @@ def scrape_button_callback(arg):
 		product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
 		product_name_text_box.Refresh()
 		return
-	if not given_max_ads or not 1 <= given_max_ads <= HARD_MAX_AD_NUMBER:
+	if not given_max_ads or not 1 <= given_max_ads <= client_state.max_ads:
 		max_ads_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
 		max_ads_text_box.Refresh()
-		scrape_message.SetValue('Invalid maximum ad number. Must be between 1 and ' + str(HARD_MAX_AD_NUMBER) + '.')
+		scrape_message.SetValue('Invalid maximum ad number. Must be between 1 and ' + str(client_state.max_ads) + '.')
 		return
 	if given_max_price is False:
 		max_price_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))

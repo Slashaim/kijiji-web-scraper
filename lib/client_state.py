@@ -41,10 +41,12 @@ location_to_ui = {
 	'oshawa-durham-region': 'Oshawa / Durham Region'
 }
 
+max_ads = 50
 ad_entries = []
 max_notifications = 100
 notification_gui_panels = []
 notification_entries = collections.deque(maxlen = max_notifications)
+max_trackers = 10
 tracker_entries = []
 
 viewed_ad_ids = set()

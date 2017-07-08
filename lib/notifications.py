@@ -290,22 +290,26 @@ def update_notifications_view():
 	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
 	# updating gui to match notifications
 	current_time = time.perf_counter()
-	for index, entry in enumerate(client_state.notification_entries):
-		dt = current_time - entry['start_time']
-		clamped_dt = helpers.clamp(dt, minimum = 0)
-		formatted_dt = str(datetime.timedelta(seconds = round(clamped_dt)))
-		gui = client_state.notification_gui_panels[index]
-		gui['front_text'].SetValue(entry['front_text'])
-		gui['notification_title'].SetValue(entry['notification_title'])
-		gui['time_ago'].SetValue('Scraped ' + formatted_dt + ' ago')
-		gui['ad_title'].SetValue(entry['ad_title'])
-		gui['ad_price'].SetValue(entry['ad_price'])
-		gui['ad_url'].SetValue(entry['ad_url'])
-		gui['front_text'].SetStyle(0, 500, attr)
-		gui['notification_title'].SetStyle(0, 500, attr)
-		gui['time_ago'].SetStyle(0, 500, attr)
-		update_remove_button_binding(gui['remove_notification_button'], entry)
-		gui['remove_notification_button'].Show()
+	try:
+		for index, entry in enumerate(client_state.notification_entries):
+			dt = current_time - entry['start_time']
+			clamped_dt = helpers.clamp(dt, minimum = 0)
+			formatted_dt = str(datetime.timedelta(seconds = round(clamped_dt)))
+			gui = client_state.notification_gui_panels[index]
+			gui['front_text'].SetValue(entry['front_text'])
+			gui['notification_title'].SetValue(entry['notification_title'])
+			gui['time_ago'].SetValue('Scraped ' + formatted_dt + ' ago')
+			gui['ad_title'].SetValue(entry['ad_title'])
+			gui['ad_price'].SetValue(entry['ad_price'])
+			gui['ad_url'].SetValue(entry['ad_url'])
+			gui['front_text'].SetStyle(0, 500, attr)
+			gui['notification_title'].SetStyle(0, 500, attr)
+			gui['time_ago'].SetStyle(0, 500, attr)
+			update_remove_button_binding(gui['remove_notification_button'], entry)
+			gui['remove_notification_button'].Show()
+	# notification_entries mutated during iteration
+	except RuntimeError:
+		pass
 	# gui panels that don't have a corresponding notification are set to blank
 	for index in range(num_notifications, client_state.max_notifications):
 		gui = client_state.notification_gui_panels[index]

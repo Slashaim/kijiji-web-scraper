@@ -100,6 +100,9 @@ def tracker_button_callback(arg):
 	given_max_price = helpers.get_max_price(tracker_max_price_text_box.GetLineText(lineNo = 0))
 	given_location = tracker_location_choice.GetSelection()
 	location = client_state.ui_to_location.get(tracker_location_choice.GetString(given_location))
+	if len(client_state.tracker_entries) >= client_state.max_trackers:
+		tracker_message.SetValue('Max trackers (' + str(client_state.max_trackers) + ') reached.' )
+		return
 	if not helpers.valid_product_name(given_product_name):
 		product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
 		product_name_text_box.Refresh()
@@ -117,7 +120,7 @@ def tracker_button_callback(arg):
 	entry = add_tracker_entry({
 		'product_name': given_product_name,
 		'location': location,
-		'cycle_time': 15,
+		'cycle_time': 900,
 		'max_price': given_max_price
 	})
 	trackers_panel = client_state.gui_elements['trackers_panel']
