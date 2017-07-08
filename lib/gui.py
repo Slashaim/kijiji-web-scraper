@@ -222,6 +222,7 @@ def main():
 	instantiate_all_views()
 	hide_all_views()
 	change_view('scraping')
+	notifications.create_notification_gui_update_thread()
 	trackers.create_tracker_time_update_thread()
 	trackers.create_tracker_ad_update_thread()
 	app.MainLoop()

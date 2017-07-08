@@ -138,16 +138,6 @@ def create_tracker_button(parent):
 	client_state.gui_elements['tracker_button'] = button
 	return button
 
-def show_tray_notifications_checkbox_callback(arg):
-	global USER_SHOW_TRAY_NOTIFICATIONS
-	USER_SHOW_TRAY_NOTIFICATIONS = arg.IsChecked()
-
-def create_show_tray_notifications_checkbox(parent):
-	checkbox = wx.CheckBox(parent, wx.ID_ANY, "Show Tray Notifications")
-	checkbox.Bind(wx.EVT_CHECKBOX, show_tray_notifications_checkbox_callback)
-	client_state.gui_elements['show_tray_notifications'] = checkbox
-	return checkbox
-
 def create_tracker_message(parent):
 	label = wx.TextCtrl(parent, wx.ID_ANY, "", style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_MULTILINE|wx.TE_NO_VSCROLL)
 	label.SetBackgroundColour(wx.Colour(240,240,240))
@@ -173,7 +163,6 @@ def generate_trackers_options(parent):
 	tracker_max_price_text_box = create_tracker_max_price_text_box(subpanel_2)
 	tracker_location_choice = create_tracker_location_choice(trackers_options_panel)
 	tracker_button = create_tracker_button(trackers_options_panel)
-	show_tray_notifications_checkbox = create_show_tray_notifications_checkbox(trackers_options_panel)
 	tracker_message = create_tracker_message(trackers_options_panel)
 	# putting in sizers
 	horiz_sizer_1.Add(tracker_product_name_text_box_label, 0, wx.TOP|wx.EXPAND, 4)
@@ -185,14 +174,13 @@ def generate_trackers_options(parent):
 	trackers_options_sizer.Add(subpanel_2, 0, wx.ALL|wx.EXPAND, 5)
 	trackers_options_sizer.Add(tracker_location_choice, 0, wx.ALL|wx.EXPAND, 5)
 	trackers_options_sizer.Add(tracker_button, 0, wx.ALL|wx.EXPAND, 5)
-	trackers_options_sizer.Add(show_tray_notifications_checkbox, 0, wx.ALL|wx.EXPAND, 5)
 	trackers_options_sizer.Add(tracker_message, 0, wx.ALL|wx.EXPAND, 5)
 	return trackers_options_panel
 
 
 """-----------------------------------------------------------------------------
 
-	Trackers Options actions
+	Trackers actions
 	
 -----------------------------------------------------------------------------"""
 
@@ -335,20 +323,28 @@ def ad_update_tracker_entry(entry):
 					'notification_title': notification_title,
 					'ad_price': price,
 					'ad_title': ad.get('title'),
-					'ad_url': ad.get('url')
+					'ad_url': ad.get('url'),
+					'start_time': time.perf_counter()
 				}
 				client_state.notification_entries.appendleft(new_notification)
 			if len(ads) > 0:
 				notifications.update_notifications_view()
+				main_frame = client_state.gui_elements['main_frame']
+				if main_frame.IsIconized():
+					main_frame.RequestUserAttention(flags = wx.USER_ATTENTION_INFO)
 		thread = threading.Thread(None, target = gui_update_func)
 		thread.start()
 
 def create_tracker_time_update_thread():
 	def time_update_loop():
 		while client_state.app_open:
-			for entry in client_state.tracker_entries:
-				time_update_tracker_entry(entry)
-				gui_update_tracker_entry(entry)
+			try:
+				for entry in client_state.tracker_entries:
+					time_update_tracker_entry(entry)
+					gui_update_tracker_entry(entry)
+			# tracker_entries mutated during iteration
+			except RuntimeError:
+				pass
 			time.sleep(0.8)
 	thread = threading.Thread(None, target = time_update_loop)
 	thread.start()
@@ -356,8 +352,12 @@ def create_tracker_time_update_thread():
 def create_tracker_ad_update_thread():
 	def ad_update_loop():
 		while client_state.app_open:
-			for entry in client_state.tracker_entries:
-				ad_update_tracker_entry(entry)
+			try:
+				for entry in client_state.tracker_entries:
+					ad_update_tracker_entry(entry)
+			# tracker_entries mutated during iteration
+			except RuntimeError:
+				pass
 			time.sleep(1)
 	thread = threading.Thread(None, target = ad_update_loop)
 	thread.start()

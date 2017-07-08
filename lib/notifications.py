@@ -9,6 +9,7 @@
 import wx
 import re
 import time
+import datetime
 import asyncio
 import threading
 import collections
@@ -58,6 +59,37 @@ def generate_notifications_options(parent):
 	notifications_options_sizer.Add(notifications_label, 0, wx.ALL|wx.EXPAND)
 	notifications_options_sizer.Add(clear_all_notifications_button, 0, wx.ALL|wx.EXPAND, 5)
 	return notifications_options_panel
+
+
+"""-----------------------------------------------------------------------------
+
+	Trackers actions
+	
+-----------------------------------------------------------------------------"""
+
+def gui_update_notification_entry(gui, entry):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	current_time = time.perf_counter()
+	dt = current_time - entry['start_time']
+	clamped_dt = helpers.clamp(dt, minimum = 0)
+	formatted_dt = str(datetime.timedelta(seconds = round(clamped_dt)))
+	gui['time_ago'].SetValue('Scraped ' + formatted_dt + ' ago')
+	gui['time_ago'].SetStyle(0, 500, attr)
+
+def create_notification_gui_update_thread():
+	def gui_update_loop():
+		while client_state.app_open:
+			try:
+				for index, entry in enumerate(client_state.notification_entries):
+					gui = client_state.notification_gui_panels[index]
+					gui_update_notification_entry(gui, entry)
+			# notification_entries mutated during iteration
+			except RuntimeError:
+				pass
+			time.sleep(5)
+	thread = threading.Thread(None, target = gui_update_loop)
+	thread.start()
 
 
 """-----------------------------------------------------------------------------
@@ -139,6 +171,14 @@ def create_notification_newad_title(parent, title):
 	text.SetStyle(0, 500, attr)
 	return text
 
+def create_notification_newad_time_ago(parent, time):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	text = wx.TextCtrl(parent, wx.ID_ANY, time, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
+	text.SetBackgroundColour(wx.Colour(240, 240, 240))
+	text.SetStyle(0, 500, attr)
+	return text
+
 def create_notification_newad_price(parent, price):
 	text = wx.TextCtrl(parent, wx.ID_ANY, price, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL)
 	text.SetBackgroundColour(wx.Colour(240, 240, 240))
@@ -157,6 +197,7 @@ def create_notification_newad_url(parent, url):
 def generate_notification_newad(parent, notification_dict):
 	front_text = notification_dict.get('front_text') or ''
 	notification_title = notification_dict.get('notification_title') or ''
+	time_ago = notification_dict.get('time_ago') or ''
 	ad_price = helpers.convert_price_to_display(notification_dict.get('ad_price')) or ''
 	ad_title = notification_dict.get('ad_title') or ''
 	ad_url = notification_dict.get('ad_url') or ''
@@ -179,6 +220,7 @@ def generate_notification_newad(parent, notification_dict):
 	# creating elements
 	newad_front_text = create_notification_newad_front_text(subpanel_1, front_text)
 	newad_notification_title = create_notification_newad_title(subpanel_1, notification_title)
+	newad_time_ago = create_notification_newad_time_ago(subpanel_1, time_ago)
 	newad_ad_price = create_notification_newad_price(subpanel_2, ad_price)
 	newad_ad_title = create_notification_newad_adtitle(subpanel_2, ad_title)
 	newad_ad_url = create_notification_newad_url(subpanel_3, ad_url)
@@ -186,8 +228,9 @@ def generate_notification_newad(parent, notification_dict):
 	# putting in sizers
 	horiz_sizer_1.Add(newad_front_text, 1, wx.ALL|wx.EXPAND)
 	horiz_sizer_1.Add(newad_notification_title, 5, wx.ALL|wx.EXPAND)
+	horiz_sizer_1.Add(newad_time_ago, 1, wx.ALL|wx.EXPAND)
 	horiz_sizer_2.Add(newad_ad_price, 1, wx.ALL|wx.EXPAND)
-	horiz_sizer_2.Add(newad_ad_title, 5, wx.ALL|wx.EXPAND)
+	horiz_sizer_2.Add(newad_ad_title, 6, wx.ALL|wx.EXPAND)
 	horiz_sizer_3.Add(newad_ad_url, 1, wx.ALL|wx.EXPAND)
 	horiz_sizer_4.Add(remove_notification_button, 0, wx.ALL|wx.EXPAND)
 	notification_panel_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
@@ -200,6 +243,7 @@ def generate_notification_newad(parent, notification_dict):
 	client_state.notification_gui_panels.append({
 		'front_text': newad_front_text,
 		'notification_title': newad_notification_title,
+		'time_ago': newad_time_ago,
 		'ad_price': newad_ad_price,
 		'ad_title': newad_ad_title,
 		'ad_url': newad_ad_url,
@@ -245,15 +289,21 @@ def update_notifications_view():
 	attr = wx.TextAttr()
 	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
 	# updating gui to match notifications
+	current_time = time.perf_counter()
 	for index, entry in enumerate(client_state.notification_entries):
+		dt = current_time - entry['start_time']
+		clamped_dt = helpers.clamp(dt, minimum = 0)
+		formatted_dt = str(datetime.timedelta(seconds = round(clamped_dt)))
 		gui = client_state.notification_gui_panels[index]
 		gui['front_text'].SetValue(entry['front_text'])
 		gui['notification_title'].SetValue(entry['notification_title'])
+		gui['time_ago'].SetValue('Scraped ' + formatted_dt + ' ago')
 		gui['ad_title'].SetValue(entry['ad_title'])
 		gui['ad_price'].SetValue(entry['ad_price'])
 		gui['ad_url'].SetValue(entry['ad_url'])
 		gui['front_text'].SetStyle(0, 500, attr)
 		gui['notification_title'].SetStyle(0, 500, attr)
+		gui['time_ago'].SetStyle(0, 500, attr)
 		update_remove_button_binding(gui['remove_notification_button'], entry)
 		gui['remove_notification_button'].Show()
 	# gui panels that don't have a corresponding notification are set to blank
@@ -261,14 +311,15 @@ def update_notifications_view():
 		gui = client_state.notification_gui_panels[index]
 		gui['front_text'].SetValue('')
 		gui['notification_title'].SetValue('')
+		gui['time_ago'].SetValue('')
 		gui['ad_title'].SetValue('')
 		gui['ad_price'].SetValue('')
 		gui['ad_url'].SetValue('')
 		gui['remove_notification_button'].Hide()
 	# updating header text to display num of notifications
-	num_notifications = len(client_state.notification_entries)
 	if num_notifications >= client_state.max_notifications:
 		displayed = str(num_notifications) + ' notifications found. Maximum notifications reached, older notifications deleted.'
+		client_state.gui_elements['notifications_header_text'].SetValue(displayed)
 	else:
 		displayed = str(num_notifications) + ' notifications found.'
 		client_state.gui_elements['notifications_header_text'].SetValue(displayed)
@@ -280,7 +331,7 @@ def show_notifications_view():
 def hide_notifications_view():
 	client_state.gui_elements['notifications_view_panel'].Hide()
 
-# for i in range(0, 5):
+# for i in range(0, 100):
 # 	client_state.notification_entries.append({
 # 		'notification_type': 'newad',
 # 		'front_text': 'New Ad',
