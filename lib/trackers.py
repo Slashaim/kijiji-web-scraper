@@ -12,10 +12,10 @@ import datetime
 import asyncio
 import threading
 
-import kijiji_scraper
-import helpers
-import client_state
-import notifications
+import lib.kijiji_scraper
+import lib.helpers
+import lib.client_state
+import lib.notifications
 
 
 """-----------------------------------------------------------------------------
@@ -27,9 +27,9 @@ import notifications
 def get_notification_title_from_tracker(entry):
 	product_name = entry['product_name']
 	given_location = entry.get('location')
-	location = client_state.location_to_ui.get(given_location)
+	location = lib.client_state.location_to_ui.get(given_location)
 	given_max_price = entry.get('max_price')
-	max_price = helpers.convert_price_to_display(given_max_price)
+	max_price = lib.helpers.convert_price_to_display(given_max_price)
 	if given_max_price and location:
 		return product_name + ' in ' + location + ' under ' + max_price
 	elif location:
@@ -40,13 +40,13 @@ def get_notification_title_from_tracker(entry):
 		return product_name
 
 def update_header_text():
-	num_trackers = len(client_state.tracker_entries)
+	num_trackers = len(lib.client_state.tracker_entries)
 	displayed = 'No trackers found.'
 	if num_trackers == 1:
 		displayed = str(num_trackers) + ' tracker found.'
 	elif num_trackers > 1:
 		displayed = str(num_trackers) + ' trackers found.'
-	client_state.gui_elements['trackers_header_text'].SetValue(displayed)
+	lib.client_state.gui_elements['trackers_header_text'].SetValue(displayed)
 
 
 """-----------------------------------------------------------------------------
@@ -61,7 +61,7 @@ def create_trackers_options_sizer():
 
 def create_trackers_options_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
-	client_state.gui_elements['trackers_options_panel'] = panel
+	lib.client_state.gui_elements['trackers_options_panel'] = panel
 	return panel
 
 def create_trackers_options_sub_panel_sizer():
@@ -82,7 +82,7 @@ def create_tracker_product_name_text_box_label(parent):
 
 def create_tracker_product_name_text_box(parent):
 	text_box = wx.TextCtrl(parent, wx.ID_ANY)
-	client_state.gui_elements['tracker_product_name_text_box'] = text_box
+	lib.client_state.gui_elements['tracker_product_name_text_box'] = text_box
 	return text_box
 
 def create_tracker_max_price_text_box_label(parent):
@@ -91,33 +91,33 @@ def create_tracker_max_price_text_box_label(parent):
 
 def create_tracker_max_price_text_box(parent):
 	text_box = wx.TextCtrl(parent, wx.ID_ANY)
-	client_state.gui_elements['tracker_max_price_text_box'] = text_box
+	lib.client_state.gui_elements['tracker_max_price_text_box'] = text_box
 	return text_box
 
 def create_tracker_location_choice(parent):
-	choice = wx.Choice(parent, wx.ID_ANY, choices = client_state.valid_locations)
+	choice = wx.Choice(parent, wx.ID_ANY, choices = lib.client_state.valid_locations)
 	choice.SetSelection(0)
-	client_state.gui_elements['tracker_location_choice'] = choice
+	lib.client_state.gui_elements['tracker_location_choice'] = choice
 	return choice
 
 def tracker_button_callback(arg):
-	tracker_product_name_text_box = client_state.gui_elements['tracker_product_name_text_box']
-	tracker_max_price_text_box = client_state.gui_elements['tracker_max_price_text_box']
-	tracker_location_choice = client_state.gui_elements['tracker_location_choice']
-	tracker_message = client_state.gui_elements['tracker_message']
+	tracker_product_name_text_box = lib.client_state.gui_elements['tracker_product_name_text_box']
+	tracker_max_price_text_box = lib.client_state.gui_elements['tracker_max_price_text_box']
+	tracker_location_choice = lib.client_state.gui_elements['tracker_location_choice']
+	tracker_message = lib.client_state.gui_elements['tracker_message']
 	# setting initial gui state
 	tracker_product_name_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
 	tracker_product_name_text_box.Refresh()
 	tracker_message.SetValue('')
 	# getting initial gui state and checking for valid inputs
 	given_product_name = tracker_product_name_text_box.GetLineText(lineNo = 0)
-	given_max_price = helpers.get_max_price(tracker_max_price_text_box.GetLineText(lineNo = 0))
+	given_max_price = lib.helpers.get_max_price(tracker_max_price_text_box.GetLineText(lineNo = 0))
 	given_location = tracker_location_choice.GetSelection()
-	location = client_state.ui_to_location.get(tracker_location_choice.GetString(given_location))
-	if len(client_state.tracker_entries) >= client_state.max_trackers:
-		tracker_message.SetValue('Max trackers (' + str(client_state.max_trackers) + ') reached.' )
+	location = lib.client_state.ui_to_location.get(tracker_location_choice.GetString(given_location))
+	if len(lib.client_state.tracker_entries) >= lib.client_state.max_trackers:
+		tracker_message.SetValue('Max trackers (' + str(lib.client_state.max_trackers) + ') reached.' )
 		return
-	if not helpers.valid_product_name(given_product_name):
+	if not lib.helpers.valid_product_name(given_product_name):
 		product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
 		product_name_text_box.Refresh()
 		tracker_message.SetValue('Invalid product name. Only alphabetical and numeric characters are supported.')
@@ -137,24 +137,24 @@ def tracker_button_callback(arg):
 		'cycle_time': 900,
 		'max_price': given_max_price
 	})
-	trackers_panel = client_state.gui_elements['trackers_panel']
+	trackers_panel = lib.client_state.gui_elements['trackers_panel']
 	tracker_panel = generate_tracker(trackers_panel, entry)
-	trackers_panel_sizer = client_state.gui_elements['trackers_panel_sizer']
+	trackers_panel_sizer = lib.client_state.gui_elements['trackers_panel_sizer']
 	trackers_panel_sizer.Add(tracker_panel, 0, wx.ALL|wx.EXPAND, 5)
 	update_header_text()
-	main_frame = client_state.gui_elements['main_frame']
+	main_frame = lib.client_state.gui_elements['main_frame']
 	main_frame.Layout()
 
 def create_tracker_button(parent):
 	button = wx.Button(parent, wx.ID_ANY, "Create New Tracker")
 	button.Bind(wx.EVT_BUTTON, tracker_button_callback)
-	client_state.gui_elements['tracker_button'] = button
+	lib.client_state.gui_elements['tracker_button'] = button
 	return button
 
 def create_tracker_message(parent):
 	label = wx.TextCtrl(parent, wx.ID_ANY, "", style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_MULTILINE|wx.TE_NO_VSCROLL)
 	label.SetBackgroundColour(wx.Colour(240,240,240))
-	client_state.gui_elements['tracker_message'] = label
+	lib.client_state.gui_elements['tracker_message'] = label
 	return label
 
 def generate_trackers_options(parent):
@@ -226,7 +226,7 @@ def get_new_ads_for_tracker(entry):
 		return ad['ad_id'] in viewed_ad_ids
 
 	try:
-		ads = kijiji_scraper.get_ad_entries_from_constraints(
+		ads = lib.kijiji_scraper.get_ad_entries_from_constraints(
 			parameters = {
 				'product_name': product_name,
 				'location': location,
@@ -261,7 +261,7 @@ def init_tracker_viewed_ads(entry):
 		return class_allowed
 
 	try:
-		ads = kijiji_scraper.get_ad_entries_from_constraints(
+		ads = lib.kijiji_scraper.get_ad_entries_from_constraints(
 			parameters = {
 				'product_name': product_name,
 				'location': location,
@@ -291,10 +291,10 @@ def time_update_tracker_entry(entry):
 
 def gui_update_tracker_entry(entry):
 	try:
-		clamped_active_time = helpers.clamp(entry['active_time'], minimum = 0)
+		clamped_active_time = lib.helpers.clamp(entry['active_time'], minimum = 0)
 		formatted_active_time = str(datetime.timedelta(seconds = round(clamped_active_time)))
 		entry['gui_active_time'].SetValue(formatted_active_time)
-		clamped_time_to_next_scrape = helpers.clamp(entry['time_to_next_scrape'], minimum = 0)
+		clamped_time_to_next_scrape = lib.helpers.clamp(entry['time_to_next_scrape'], minimum = 0)
 		formatted_time_to_next_scrape = str(datetime.timedelta(seconds = round(clamped_time_to_next_scrape)))
 		entry['gui_scrape_time'].SetValue(formatted_time_to_next_scrape)
 	except KeyError:
@@ -310,7 +310,7 @@ def ad_update_tracker_entry(entry):
 			ads = get_new_ads_for_tracker(entry)
 			for ad in ads:
 				notification_title = get_notification_title_from_tracker(entry)
-				price = helpers.convert_price_to_display(ad.get('price'))
+				price = lib.helpers.convert_price_to_display(ad.get('price'))
 				new_notification = {
 					'notification_type': 'newad',
 					'front_text': 'New Ad',
@@ -320,10 +320,10 @@ def ad_update_tracker_entry(entry):
 					'ad_url': ad.get('url'),
 					'start_time': time.perf_counter()
 				}
-				client_state.notification_entries.appendleft(new_notification)
+				lib.client_state.notification_entries.appendleft(new_notification)
 			if len(ads) > 0:
-				notifications.update_notifications_view()
-				main_frame = client_state.gui_elements['main_frame']
+				lib.notifications.update_notifications_view()
+				main_frame = lib.client_state.gui_elements['main_frame']
 				if main_frame.IsIconized():
 					main_frame.RequestUserAttention(flags = wx.USER_ATTENTION_INFO)
 		thread = threading.Thread(None, target = gui_update_func)
@@ -342,23 +342,23 @@ def create_trackers_view_sizer():
 
 def create_trackers_view_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
-	client_state.gui_elements['trackers_view_panel'] = panel
+	lib.client_state.gui_elements['trackers_view_panel'] = panel
 	return panel
 
 def create_trackers_panel_sizer():
 	sizer = wx.BoxSizer(wx.VERTICAL)
-	client_state.gui_elements['trackers_panel_sizer'] = sizer
+	lib.client_state.gui_elements['trackers_panel_sizer'] = sizer
 	return sizer
 
 def create_trackers_panel(parent):
 	panel = wx.ScrolledCanvas(parent, wx.ID_ANY, style = wx.VSCROLL)
 	panel.SetScrollbars(1, 40, 1, 40)
-	client_state.gui_elements['trackers_panel'] = panel
+	lib.client_state.gui_elements['trackers_panel'] = panel
 	return panel
 
 def create_trackers_header_text(parent):
 	text = wx.TextCtrl(parent, wx.ID_ANY, '', style = wx.BORDER_NONE|wx.TE_READONLY)
-	client_state.gui_elements['trackers_header_text'] = text
+	lib.client_state.gui_elements['trackers_header_text'] = text
 	update_header_text()
 	return text
 
@@ -439,9 +439,9 @@ def create_tracker_scrape_time(parent, ad_entry):
 def tracker_remove_tracker_button_callback_generator(panel, entry):
 	def callback(arg):
 		panel.Destroy()
-		client_state.tracker_entries.remove(entry)
+		lib.client_state.tracker_entries.remove(entry)
 		update_header_text()
-		client_state.gui_elements['main_frame'].Layout()
+		lib.client_state.gui_elements['main_frame'].Layout()
 	return callback
 
 def create_remove_tracker_button(parent, panel, entry):
@@ -452,8 +452,8 @@ def create_remove_tracker_button(parent, panel, entry):
 
 def generate_tracker(parent, tracker_dict):
 	product_name = tracker_dict.get('product_name')
-	location = client_state.location_to_ui[tracker_dict['location']]
-	max_price = helpers.convert_price_to_display(tracker_dict.get('max_price'))
+	location = lib.client_state.location_to_ui[tracker_dict['location']]
+	max_price = lib.helpers.convert_price_to_display(tracker_dict.get('max_price'))
 	# creating panels and setting sizers
 	tracker_panel = create_tracker_panel(parent)
 	tracker_panel_sizer = create_tracker_panel_sizer()
@@ -513,14 +513,14 @@ def add_tracker_entry(tracker_dict):
 	# initialising new tracker with set of ads
 	init_tracker_viewed_ads(entry)
 	entry['start_time'] = time.perf_counter()
-	client_state.tracker_entries.append(entry)
+	lib.client_state.tracker_entries.append(entry)
 	return entry
 
 def create_tracker_time_update_thread():
 	def time_update_loop():
-		while client_state.app_open:
+		while lib.client_state.app_open:
 			try:
-				for entry in client_state.tracker_entries:
+				for entry in lib.client_state.tracker_entries:
 					time_update_tracker_entry(entry)
 					gui_update_tracker_entry(entry)
 			# tracker_entries mutated during iteration
@@ -532,9 +532,9 @@ def create_tracker_time_update_thread():
 
 def create_tracker_ad_update_thread():
 	def ad_update_loop():
-		while client_state.app_open:
+		while lib.client_state.app_open:
 			try:
-				for entry in client_state.tracker_entries:
+				for entry in lib.client_state.tracker_entries:
 					ad_update_tracker_entry(entry)
 			# tracker_entries mutated during iteration
 			except RuntimeError:
@@ -560,16 +560,16 @@ def generate_trackers_view(parent):
 	trackers_header = create_trackers_header_text(trackers_view_panel)
 	trackers_view_sizer.Add(trackers_header, 0, wx.ALL|wx.EXPAND, 5)
 	trackers_view_sizer.Add(trackers_panel, 1, wx.ALL|wx.EXPAND, 5)
-	for entry in client_state.tracker_entries:
+	for entry in lib.client_state.tracker_entries:
 		tracker = generate_tracker(trackers_panel, entry)
 		trackers_panel_sizer.Add(tracker, 0, wx.ALL|wx.EXPAND, 5)
 	return trackers_view_panel
 
 def show_trackers_view():
-	client_state.gui_elements['trackers_view_panel'].Show()
+	lib.client_state.gui_elements['trackers_view_panel'].Show()
 
 def hide_trackers_view():
-	client_state.gui_elements['trackers_view_panel'].Hide()
+	lib.client_state.gui_elements['trackers_view_panel'].Hide()
 
 # for i in range(0, 2):
 # 	kwargs = {

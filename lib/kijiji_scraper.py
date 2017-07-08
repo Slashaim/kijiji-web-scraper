@@ -13,7 +13,7 @@ import asyncio
 import aiohttp
 import time
 
-import client_state
+import lib.client_state
 
 
 """-----------------------------------------------------------------------------
@@ -153,7 +153,7 @@ def get_ads_from_page(tree, class_name):
 		title = raw_title.strip()
 		price = convert_price_text_to_float(raw_price.strip())
 		description = raw_description.strip()
-		location = client_state.ui_to_location.get(raw_location.strip())
+		location = lib.client_state.ui_to_location.get(raw_location.strip())
 		date_posted = raw_date_posted.strip()
 		url = 'http://kijiji.ca' + raw_url
 		ad_id = int(raw_ad_id)
@@ -188,7 +188,7 @@ def get_third_party_ads_from_page(tree, class_name):
 		title = raw_title.strip()
 		price = convert_price_text_to_float(raw_price.strip())
 		description = raw_description.strip()
-		location = client_state.ui_to_location.get(raw_location.strip())
+		location = lib.client_state.ui_to_location.get(raw_location.strip())
 		date_posted = raw_date_posted.strip()
 		url = 'http://kijiji.ca' + raw_url
 		ad_id = int(raw_ad_id)

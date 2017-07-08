@@ -9,9 +9,9 @@
 import wx
 import asyncio
 
-import kijiji_scraper
-import helpers
-import client_state
+import lib.kijiji_scraper
+import lib.helpers
+import lib.client_state
 
 
 """-----------------------------------------------------------------------------
@@ -42,7 +42,7 @@ def create_scrape_options_sizer():
 
 def create_scrape_options_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
-	client_state.gui_elements['scrape_options_panel'] = panel
+	lib.client_state.gui_elements['scrape_options_panel'] = panel
 	return panel
 
 def create_scrape_options_horizontal_sizer():
@@ -65,12 +65,12 @@ def create_product_name_text_box(parent):
 	global USER_PRODUCT_NAME
 	startingText = USER_PRODUCT_NAME or ''
 	text_box = wx.TextCtrl(parent, wx.ID_ANY, startingText)
-	client_state.gui_elements['product_name_text_box'] = text_box
+	lib.client_state.gui_elements['product_name_text_box'] = text_box
 	return text_box
 
 def create_only_new_checkbox(parent):
 	checkbox = wx.CheckBox(parent, wx.ID_ANY, "Only scrape new ads")
-	client_state.gui_elements['only_new_checkbox'] = checkbox
+	lib.client_state.gui_elements['only_new_checkbox'] = checkbox
 	return checkbox
 
 def create_max_ads_label(parent):
@@ -78,9 +78,9 @@ def create_max_ads_label(parent):
 	return label
 
 def create_max_ads_text_box(parent):
-	startingText = str(USER_MAX_ADS or client_state.max_ads)
+	startingText = str(USER_MAX_ADS or lib.client_state.max_ads)
 	textbox = wx.TextCtrl(parent, wx.ID_ANY, startingText)
-	client_state.gui_elements['max_ads_text_box'] = textbox
+	lib.client_state.gui_elements['max_ads_text_box'] = textbox
 	return textbox
 
 def create_max_price_label(parent):
@@ -89,25 +89,25 @@ def create_max_price_label(parent):
 
 def create_max_price_text_box(parent):
 	textbox = wx.TextCtrl(parent, wx.ID_ANY, '')
-	client_state.gui_elements['max_price_text_box'] = textbox
+	lib.client_state.gui_elements['max_price_text_box'] = textbox
 	return textbox
 
 def create_show_top_ads_checkbox(parent):
 	checkbox = wx.CheckBox(parent, wx.ID_ANY, "Show Top Ads")
-	client_state.gui_elements['show_top_ads_checkbox'] = checkbox
+	lib.client_state.gui_elements['show_top_ads_checkbox'] = checkbox
 	return checkbox
 
 def create_show_third_party_ads_checkbox(parent):
 	checkbox = wx.CheckBox(parent, wx.ID_ANY, "Show Third-Party Ads")
-	client_state.gui_elements['show_third_party_ads_checkbox'] = checkbox
+	lib.client_state.gui_elements['show_third_party_ads_checkbox'] = checkbox
 	return checkbox
 
 def create_location_choice(parent):
 	global USER_LOCATION_INDEX
 	startingChoice = USER_LOCATION_INDEX or 0
-	choice = wx.Choice(parent, wx.ID_ANY, choices = client_state.valid_locations)
+	choice = wx.Choice(parent, wx.ID_ANY, choices = lib.client_state.valid_locations)
 	choice.SetSelection(startingChoice)
-	client_state.gui_elements['location_choice'] = choice
+	lib.client_state.gui_elements['location_choice'] = choice
 	return choice
 
 def scrape_button_callback(arg):
@@ -115,14 +115,14 @@ def scrape_button_callback(arg):
 	global USER_MAX_ADS
 	global USER_LOCATION_INDEX
 	global USER_MAX_PRICE
-	product_name_text_box = client_state.gui_elements['product_name_text_box']
-	location_choice = client_state.gui_elements['location_choice']
-	scrape_message = client_state.gui_elements['scrape_message']
-	max_ads_text_box = client_state.gui_elements['max_ads_text_box']
-	max_price_text_box = client_state.gui_elements['max_price_text_box']
-	only_new_checkbox = client_state.gui_elements['only_new_checkbox']
-	show_top_ads_checkbox = client_state.gui_elements['show_top_ads_checkbox']
-	show_third_party_ads_checkbox = client_state.gui_elements['show_third_party_ads_checkbox']
+	product_name_text_box = lib.client_state.gui_elements['product_name_text_box']
+	location_choice = lib.client_state.gui_elements['location_choice']
+	scrape_message = lib.client_state.gui_elements['scrape_message']
+	max_ads_text_box = lib.client_state.gui_elements['max_ads_text_box']
+	max_price_text_box = lib.client_state.gui_elements['max_price_text_box']
+	only_new_checkbox = lib.client_state.gui_elements['only_new_checkbox']
+	show_top_ads_checkbox = lib.client_state.gui_elements['show_top_ads_checkbox']
+	show_third_party_ads_checkbox = lib.client_state.gui_elements['show_third_party_ads_checkbox']
 	# setting initial gui state
 	product_name_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
 	max_ads_text_box.SetBackgroundColour(wx.Colour(255, 255, 255))
@@ -133,19 +133,19 @@ def scrape_button_callback(arg):
 	scrape_message.SetValue('')
 	# getting initial gui state and checking for valid inputs
 	given_product_name = product_name_text_box.GetLineText(lineNo = 0)
-	given_max_ads = helpers.get_max_ads(max_ads_text_box.GetLineText(lineNo = 0))
-	given_max_price = helpers.get_max_price(max_price_text_box.GetLineText(lineNo = 0))
+	given_max_ads = lib.helpers.get_max_ads(max_ads_text_box.GetLineText(lineNo = 0))
+	given_max_price = lib.helpers.get_max_price(max_price_text_box.GetLineText(lineNo = 0))
 	given_location = location_choice.GetSelection()
-	location = client_state.ui_to_location.get(location_choice.GetString(given_location))
-	if not helpers.valid_product_name(given_product_name):
+	location = lib.client_state.ui_to_location.get(location_choice.GetString(given_location))
+	if not lib.helpers.valid_product_name(given_product_name):
 		scrape_message.SetValue('Invalid product name. Only alphabetical and numeric characters are supported.')
 		product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
 		product_name_text_box.Refresh()
 		return
-	if not given_max_ads or not 1 <= given_max_ads <= client_state.max_ads:
+	if not given_max_ads or not 1 <= given_max_ads <= lib.client_state.max_ads:
 		max_ads_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
 		max_ads_text_box.Refresh()
-		scrape_message.SetValue('Invalid maximum ad number. Must be between 1 and ' + str(client_state.max_ads) + '.')
+		scrape_message.SetValue('Invalid maximum ad number. Must be between 1 and ' + str(lib.client_state.max_ads) + '.')
 		return
 	if given_max_price is False:
 		max_price_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
@@ -185,14 +185,14 @@ def scrape_button_callback(arg):
 
 	def entry_break(ad):
 		is_normal_ad = ad['html_class'] == 'normal'
-		has_been_seen = ad['ad_id'] in client_state.viewed_ad_ids
+		has_been_seen = ad['ad_id'] in lib.client_state.viewed_ad_ids
 		return only_new_ads and is_normal_ad and has_been_seen
 
 	def post_proc(ad_list):
 		if only_new_ads:
 			last_index = 0
 			for index, ad in enumerate(ad_list):
-				if ad['ad_id'] in client_state.viewed_ad_ids:
+				if ad['ad_id'] in lib.client_state.viewed_ad_ids:
 					last_index = index
 					break
 			last_index = min(last_index, given_max_ads)
@@ -201,7 +201,7 @@ def scrape_button_callback(arg):
 			return ad_list[:given_max_ads]
 
 	try:
-		client_state.ad_entries = kijiji_scraper.get_ad_entries_from_constraints(
+		lib.client_state.ad_entries = lib.kijiji_scraper.get_ad_entries_from_constraints(
 			parameters = {
 				'product_name': given_product_name,
 				'location': location,
@@ -212,9 +212,9 @@ def scrape_button_callback(arg):
 			},
 			list_check = list_check
 		)
-		for ad in client_state.ad_entries:
-			ad['location'] = client_state.location_to_ui.get(ad['location'])
-			client_state.viewed_ad_ids.add(ad['ad_id'])
+		for ad in lib.client_state.ad_entries:
+			ad['location'] = lib.client_state.location_to_ui.get(ad['location'])
+			lib.client_state.viewed_ad_ids.add(ad['ad_id'])
 		update_scrape_view()
 	except asyncio.TimeoutError:
 		scrape_message.SetValue('Connection timed out. Check internet connectivity or try again later.')
@@ -222,13 +222,13 @@ def scrape_button_callback(arg):
 def create_scrape_button(parent):
 	button = wx.Button(parent, wx.ID_ANY, "Scrape")
 	button.Bind(wx.EVT_BUTTON, scrape_button_callback)
-	client_state.gui_elements['scrape_button'] = button
+	lib.client_state.gui_elements['scrape_button'] = button
 	return button
 
 def create_scrape_message(parent):
 	label = wx.TextCtrl(parent, wx.ID_ANY, "", style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_MULTILINE|wx.TE_NO_VSCROLL)
 	label.SetBackgroundColour(wx.Colour(240,240,240))
-	client_state.gui_elements['scrape_message'] = label
+	lib.client_state.gui_elements['scrape_message'] = label
 	return label
 
 def generate_scrape_options(parent):
@@ -291,7 +291,7 @@ def create_scrape_view_sizer():
 
 def create_scrape_view_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
-	client_state.gui_elements['scrape_view_panel'] = panel
+	lib.client_state.gui_elements['scrape_view_panel'] = panel
 	return panel
 
 def create_ads_panel_sizer():
@@ -301,7 +301,7 @@ def create_ads_panel_sizer():
 def create_ads_panel(parent):
 	panel = wx.ScrolledCanvas(parent, wx.ID_ANY, style = wx.VSCROLL)
 	panel.SetScrollbars(1, 40, 1, 40)
-	client_state.gui_elements['ads_panel'] = panel
+	lib.client_state.gui_elements['ads_panel'] = panel
 	return panel
 
 def create_ad_panel_sizer():
@@ -313,7 +313,7 @@ def create_ad_horizontal_sizer():
 	return sizer
 
 def create_scrape_header_text(parent):
-	num_ads = len(client_state.ad_entries)
+	num_ads = len(lib.client_state.ad_entries)
 	displayed = 'No ads found.'
 	if num_ads == 1:
 		displayed = str(num_ads) + ' ad found.'
@@ -379,12 +379,12 @@ def create_ad_description(parent, ad_description):
 def generate_ad_panel(parent, ad_dict):
 	# converting dict entries to strings
 	title = ad_dict.get('title')
-	price = helpers.convert_price_to_display(ad_dict.get('price'))
+	price = lib.helpers.convert_price_to_display(ad_dict.get('price'))
 	date_posted = ad_dict.get('date_posted')
 	location = ad_dict.get('location')
 	url = ad_dict.get('url')
 	description = ad_dict.get('description')
-	html_class = helpers.convert_html_class_to_display(ad_dict.get('html_class'))
+	html_class = lib.helpers.convert_html_class_to_display(ad_dict.get('html_class'))
 	# setting up panel, sub-panels, and sizers
 	ad_sizer = create_ad_panel_sizer()
 	horiz_sizer_1 = create_ad_horizontal_sizer()
@@ -432,24 +432,24 @@ def generate_scrape_view(parent):
 	scrape_header_text = create_scrape_header_text(scrape_view_panel)
 	scrape_view_sizer.Add(scrape_header_text, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_view_sizer.Add(ads_panel, 1, wx.ALL|wx.EXPAND, 5)
-	for ad in client_state.ad_entries:
+	for ad in lib.client_state.ad_entries:
 		ad_panel = generate_ad_panel(ads_panel, ad)
 		ads_panel_sizer.Add(ad_panel, 0, wx.ALL|wx.EXPAND, 5)
 	return scrape_view_panel
 
 def destroy_scrape_view():
-	client_state.gui_elements['scrape_view_panel'].Destroy()
+	lib.client_state.gui_elements['scrape_view_panel'].Destroy()
 
 def update_scrape_view():
-	main_frame = client_state.gui_elements['main_frame']
-	main_frame_sizer = client_state.gui_elements['main_frame_sizer']
+	main_frame = lib.client_state.gui_elements['main_frame']
+	main_frame_sizer = lib.client_state.gui_elements['main_frame_sizer']
 	destroy_scrape_view()
 	scrape_view = generate_scrape_view(main_frame)
 	main_frame_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
 	main_frame.Layout()
 
 def show_scrape_view():
-	client_state.gui_elements['scrape_view_panel'].Show()
+	lib.client_state.gui_elements['scrape_view_panel'].Show()
 
 def hide_scrape_view():
-	client_state.gui_elements['scrape_view_panel'].Hide()
+	lib.client_state.gui_elements['scrape_view_panel'].Hide()

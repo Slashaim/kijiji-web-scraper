@@ -2,27 +2,18 @@
 	
 	main.py
 
-	Started on June 18 2017.
+	Dependencies:
+	- wx: GUI library
+	- aiohttp: Asynchronous http requests
+	- lxml: html parsing
 
 -----------------------------------------------------------------------------"""
 
-import os
-import mod
+import lib.gui
 
-
-dir_name = os.path.dirname(os.path.abspath(__file__))
-test_file = dir_name + "/" + "test.txt"
 
 def main():
-	print("Hello world!")
-	# gui i/o + options
-	# web scraping tools
-	# search
-	with open(test_file) as f:
-		for line in f:
-			print(line)
-
-
+	lib.gui.instantiate()
 
 if __name__ == "__main__":
 	main()

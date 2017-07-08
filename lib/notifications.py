@@ -14,8 +14,8 @@ import asyncio
 import threading
 import collections
 
-import helpers
-import client_state
+import lib.helpers
+import lib.client_state
 
 
 """-----------------------------------------------------------------------------
@@ -30,7 +30,7 @@ def create_notifications_options_sizer():
 
 def create_notifications_options_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
-	client_state.gui_elements['notifications_options_panel'] = panel
+	lib.client_state.gui_elements['notifications_options_panel'] = panel
 	return panel
 
 def create_notifications_label(parent):
@@ -38,13 +38,13 @@ def create_notifications_label(parent):
 	return label
 
 def clear_all_notifications_button_callback(arg):
-	client_state.notification_entries = collections.deque(maxlen = client_state.max_notifications)
+	lib.client_state.notification_entries = collections.deque(maxlen = lib.client_state.max_notifications)
 	update_notifications_view()
 
 def create_clear_all_notifications_button(parent):
 	button = wx.Button(parent, wx.ID_ANY, "Clear All Notifications")
 	button.Bind(wx.EVT_BUTTON, clear_all_notifications_button_callback)
-	client_state.gui_elements['clear_all_notifications_button'] = button
+	lib.client_state.gui_elements['clear_all_notifications_button'] = button
 	return button
 
 def generate_notifications_options(parent):
@@ -73,25 +73,25 @@ def create_notifications_view_sizer():
 
 def create_notifications_view_panel(parent):
 	panel = wx.Panel(parent, wx.ID_ANY)
-	client_state.gui_elements['notifications_view_panel'] = panel
+	lib.client_state.gui_elements['notifications_view_panel'] = panel
 	return panel
 
 def create_notifications_panel_sizer():
 	sizer = wx.BoxSizer(wx.VERTICAL)
-	client_state.gui_elements['notifications_panel_sizer'] = sizer
+	lib.client_state.gui_elements['notifications_panel_sizer'] = sizer
 	return sizer
 
 def create_notifications_panel(parent):
 	panel = wx.ScrolledCanvas(parent, wx.ID_ANY, style = wx.VSCROLL)
 	panel.SetScrollbars(1, 40, 1, 40)
-	client_state.gui_elements['notifications_panel'] = panel
+	lib.client_state.gui_elements['notifications_panel'] = panel
 	return panel
 
 def create_notifications_header_text(parent):
-	num_notifications = len(client_state.notification_entries)
+	num_notifications = len(lib.client_state.notification_entries)
 	displayed = str(num_notifications) + ' notifications found.'
 	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.BORDER_NONE|wx.TE_READONLY)
-	client_state.gui_elements['notifications_header_text'] = text
+	lib.client_state.gui_elements['notifications_header_text'] = text
 	return text
 
 def create_notification_panel_sizer():
@@ -112,7 +112,7 @@ def create_notification_sub_panel(parent):
 
 def remove_notification_callback_gen(entry):
 	def callback(arg):
-		client_state.notification_entries.remove(entry)
+		lib.client_state.notification_entries.remove(entry)
 		update_notifications_view()
 	return callback
 
@@ -167,7 +167,7 @@ def generate_notification_newad(parent, notification_dict):
 	front_text = notification_dict.get('front_text') or ''
 	notification_title = notification_dict.get('notification_title') or ''
 	time_ago = notification_dict.get('time_ago') or ''
-	ad_price = helpers.convert_price_to_display(notification_dict.get('ad_price')) or ''
+	ad_price = lib.helpers.convert_price_to_display(notification_dict.get('ad_price')) or ''
 	ad_title = notification_dict.get('ad_title') or ''
 	ad_url = notification_dict.get('ad_url') or ''
 	# creating panels and setting sizers
@@ -209,7 +209,7 @@ def generate_notification_newad(parent, notification_dict):
 	if front_text ==  '':
 		remove_notification_button.Hide()
 	# adding to state
-	client_state.notification_gui_panels.append({
+	lib.client_state.notification_gui_panels.append({
 		'front_text': newad_front_text,
 		'notification_title': newad_notification_title,
 		'time_ago': newad_time_ago,
@@ -232,17 +232,17 @@ def gui_update_notification_entry(gui, entry):
 	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
 	current_time = time.perf_counter()
 	dt = current_time - entry['start_time']
-	clamped_dt = helpers.clamp(dt, minimum = 0)
+	clamped_dt = lib.helpers.clamp(dt, minimum = 0)
 	formatted_dt = str(datetime.timedelta(seconds = round(clamped_dt)))
 	gui['time_ago'].SetValue('Scraped ' + formatted_dt + ' ago')
 	gui['time_ago'].SetStyle(0, 500, attr)
 
 def create_notification_gui_update_thread():
 	def gui_update_loop():
-		while client_state.app_open:
+		while lib.client_state.app_open:
 			try:
-				for index, entry in enumerate(client_state.notification_entries):
-					gui = client_state.notification_gui_panels[index]
+				for index, entry in enumerate(lib.client_state.notification_entries):
+					gui = lib.client_state.notification_gui_panels[index]
 					gui_update_notification_entry(gui, entry)
 			# notification_entries mutated during iteration
 			except RuntimeError:
@@ -275,27 +275,27 @@ def generate_notifications_view(parent):
 	notifications_header = create_notifications_header_text(notifications_view_panel)
 	notifications_view_sizer.Add(notifications_header, 0, wx.ALL|wx.EXPAND, 5)
 	notifications_view_sizer.Add(notifications_panel, 1, wx.ALL|wx.EXPAND, 5)
-	for i in range(0, client_state.max_notifications):
+	for i in range(0, lib.client_state.max_notifications):
 		notification_panel = generate_notification(notifications_panel, {'notification_type': 'newad'})
 		notifications_panel_sizer.Add(notification_panel, 0, wx.ALL|wx.EXPAND, 5)
 	update_notifications_view()
 	return notifications_view_panel
 
 def destroy_notifications_view():
-	client_state.gui_elements['notifications_view_panel'].Destroy()
+	lib.client_state.gui_elements['notifications_view_panel'].Destroy()
 
 def update_notifications_view():
-	num_notifications = len(client_state.notification_entries)
+	num_notifications = len(lib.client_state.notification_entries)
 	attr = wx.TextAttr()
 	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
 	# updating gui to match notifications
 	current_time = time.perf_counter()
 	try:
-		for index, entry in enumerate(client_state.notification_entries):
+		for index, entry in enumerate(lib.client_state.notification_entries):
 			dt = current_time - entry['start_time']
-			clamped_dt = helpers.clamp(dt, minimum = 0)
+			clamped_dt = lib.helpers.clamp(dt, minimum = 0)
 			formatted_dt = str(datetime.timedelta(seconds = round(clamped_dt)))
-			gui = client_state.notification_gui_panels[index]
+			gui = lib.client_state.notification_gui_panels[index]
 			gui['front_text'].SetValue(entry['front_text'])
 			gui['notification_title'].SetValue(entry['notification_title'])
 			gui['time_ago'].SetValue('Scraped ' + formatted_dt + ' ago')
@@ -311,8 +311,8 @@ def update_notifications_view():
 	except RuntimeError:
 		pass
 	# gui panels that don't have a corresponding notification are set to blank
-	for index in range(num_notifications, client_state.max_notifications):
-		gui = client_state.notification_gui_panels[index]
+	for index in range(num_notifications, lib.client_state.max_notifications):
+		gui = lib.client_state.notification_gui_panels[index]
 		gui['front_text'].SetValue('')
 		gui['notification_title'].SetValue('')
 		gui['time_ago'].SetValue('')
@@ -322,21 +322,21 @@ def update_notifications_view():
 		gui['remove_notification_button'].Hide()
 	# updating header text to display num of notifications
 	displayed = 'No notifications found.'
-	if num_notifications >= client_state.max_notifications:
+	if num_notifications >= lib.client_state.max_notifications:
 		displayed = str(num_notifications) + ' notifications found. Maximum notifications reached, older notifications deleted.'
-		client_state.gui_elements['notifications_header_text'].SetValue(displayed)
+		lib.client_state.gui_elements['notifications_header_text'].SetValue(displayed)
 	elif num_notifications == 1:
 		displayed = str(num_notifications) + ' notification found.'
 	elif num_notifications > 1:
 		displayed = str(num_notifications) + ' notifications found.'
-	client_state.gui_elements['notifications_header_text'].SetValue(displayed)
-	main_frame = client_state.gui_elements['main_frame'].Layout()
+	lib.client_state.gui_elements['notifications_header_text'].SetValue(displayed)
+	main_frame = lib.client_state.gui_elements['main_frame'].Layout()
 
 def show_notifications_view():
-	client_state.gui_elements['notifications_view_panel'].Show()
+	lib.client_state.gui_elements['notifications_view_panel'].Show()
 
 def hide_notifications_view():
-	client_state.gui_elements['notifications_view_panel'].Hide()
+	lib.client_state.gui_elements['notifications_view_panel'].Hide()
 
 # for i in range(0, 100):
 # 	client_state.notification_entries.append({
