@@ -7,7 +7,6 @@
 -----------------------------------------------------------------------------"""
 
 import wx
-import re
 import time
 import datetime
 import asyncio
@@ -19,6 +18,11 @@ import client_state
 import notifications
 
 
+"""-----------------------------------------------------------------------------
+
+	Helpers
+
+-----------------------------------------------------------------------------"""
 
 def get_notification_title_from_tracker(entry):
 	product_name = entry['product_name']
@@ -34,6 +38,16 @@ def get_notification_title_from_tracker(entry):
 		return product_name + ' under ' + max_price
 	else:
 		return product_name
+
+def update_header_text():
+	num_trackers = len(client_state.tracker_entries)
+	displayed = 'No trackers found.'
+	if num_trackers == 1:
+		displayed = str(num_trackers) + ' tracker found.'
+	elif num_trackers > 1:
+		displayed = str(num_trackers) + ' trackers found.'
+	client_state.gui_elements['trackers_header_text'].SetValue(displayed)
+
 
 """-----------------------------------------------------------------------------
 
@@ -127,13 +141,9 @@ def tracker_button_callback(arg):
 	tracker_panel = generate_tracker(trackers_panel, entry)
 	trackers_panel_sizer = client_state.gui_elements['trackers_panel_sizer']
 	trackers_panel_sizer.Add(tracker_panel, 0, wx.ALL|wx.EXPAND, 5)
-	num_trackers = len(client_state.tracker_entries)
-	displayed = str(num_trackers) + ' running trackers found.'
-	client_state.gui_elements['trackers_header_text'].SetValue(displayed)
+	update_header_text()
 	main_frame = client_state.gui_elements['main_frame']
 	main_frame.Layout()
-
-
 
 def create_tracker_button(parent):
 	button = wx.Button(parent, wx.ID_ANY, "Create New Tracker")
@@ -269,25 +279,6 @@ def init_tracker_viewed_ads(entry):
 	except asyncio.TimeoutError:
 		return []
 
-def add_tracker_entry(tracker_dict):
-	entry = {
-		'product_name': tracker_dict.get('product_name'),
-		'location': tracker_dict.get('location'),
-		'max_price': tracker_dict.get('max_price'),
-		'start_time': 0,
-		'last_scrape_time': 0,
-		'active_time': 0,
-		'time_to_next_scrape': 0,
-		'cycle_time': tracker_dict.get('cycle_time'),
-		'scrape_on_next': False,
-		'viewed_ad_ids': set()
-	}
-	# initialising new tracker with set of ads
-	init_tracker_viewed_ads(entry)
-	entry['start_time'] = time.perf_counter()
-	client_state.tracker_entries.append(entry)
-	return entry
-
 def time_update_tracker_entry(entry):
 	current_time = time.perf_counter()
 	start_time = entry['start_time']
@@ -338,34 +329,6 @@ def ad_update_tracker_entry(entry):
 		thread = threading.Thread(None, target = gui_update_func)
 		thread.start()
 
-def create_tracker_time_update_thread():
-	def time_update_loop():
-		while client_state.app_open:
-			try:
-				for entry in client_state.tracker_entries:
-					time_update_tracker_entry(entry)
-					gui_update_tracker_entry(entry)
-			# tracker_entries mutated during iteration
-			except RuntimeError:
-				pass
-			time.sleep(0.8)
-	thread = threading.Thread(None, target = time_update_loop)
-	thread.start()
-
-def create_tracker_ad_update_thread():
-	def ad_update_loop():
-		while client_state.app_open:
-			try:
-				for entry in client_state.tracker_entries:
-					ad_update_tracker_entry(entry)
-			# tracker_entries mutated during iteration
-			except RuntimeError:
-				pass
-			time.sleep(1)
-	thread = threading.Thread(None, target = ad_update_loop)
-	thread.start()
-
-
 
 """-----------------------------------------------------------------------------
 
@@ -394,10 +357,9 @@ def create_trackers_panel(parent):
 	return panel
 
 def create_trackers_header_text(parent):
-	num_trackers = len(client_state.tracker_entries)
-	displayed = str(num_trackers) + ' running trackers found.'
-	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.BORDER_NONE|wx.TE_READONLY)
+	text = wx.TextCtrl(parent, wx.ID_ANY, '', style = wx.BORDER_NONE|wx.TE_READONLY)
 	client_state.gui_elements['trackers_header_text'] = text
+	update_header_text()
 	return text
 
 def create_tracker_panel_sizer():
@@ -478,9 +440,7 @@ def tracker_remove_tracker_button_callback_generator(panel, entry):
 	def callback(arg):
 		panel.Destroy()
 		client_state.tracker_entries.remove(entry)
-		num_trackers = len(client_state.tracker_entries)
-		displayed = str(num_trackers) + ' running trackers found.'
-		client_state.gui_elements['trackers_header_text'].SetValue(displayed)
+		update_header_text()
 		client_state.gui_elements['main_frame'].Layout()
 	return callback
 
@@ -530,6 +490,66 @@ def generate_tracker(parent, tracker_dict):
 	tracker_panel_sizer.Add(subpanel_3, 0, wx.ALL|wx.EXPAND, 5)
 	return tracker_panel
 
+
+"""-----------------------------------------------------------------------------
+
+	Public tracker actions
+
+-----------------------------------------------------------------------------"""
+
+def add_tracker_entry(tracker_dict):
+	entry = {
+		'product_name': tracker_dict.get('product_name'),
+		'location': tracker_dict.get('location'),
+		'max_price': tracker_dict.get('max_price'),
+		'start_time': 0,
+		'last_scrape_time': 0,
+		'active_time': 0,
+		'time_to_next_scrape': 0,
+		'cycle_time': tracker_dict.get('cycle_time'),
+		'scrape_on_next': False,
+		'viewed_ad_ids': set()
+	}
+	# initialising new tracker with set of ads
+	init_tracker_viewed_ads(entry)
+	entry['start_time'] = time.perf_counter()
+	client_state.tracker_entries.append(entry)
+	return entry
+
+def create_tracker_time_update_thread():
+	def time_update_loop():
+		while client_state.app_open:
+			try:
+				for entry in client_state.tracker_entries:
+					time_update_tracker_entry(entry)
+					gui_update_tracker_entry(entry)
+			# tracker_entries mutated during iteration
+			except RuntimeError:
+				pass
+			time.sleep(0.8)
+	thread = threading.Thread(None, target = time_update_loop)
+	thread.start()
+
+def create_tracker_ad_update_thread():
+	def ad_update_loop():
+		while client_state.app_open:
+			try:
+				for entry in client_state.tracker_entries:
+					ad_update_tracker_entry(entry)
+			# tracker_entries mutated during iteration
+			except RuntimeError:
+				pass
+			time.sleep(1)
+	thread = threading.Thread(None, target = ad_update_loop)
+	thread.start()
+
+
+"""-----------------------------------------------------------------------------
+
+	Public Functions
+
+-----------------------------------------------------------------------------"""
+
 def generate_trackers_view(parent):
 	trackers_view_sizer = create_trackers_view_sizer()
 	trackers_view_panel = create_trackers_view_panel(parent)
@@ -544,17 +564,6 @@ def generate_trackers_view(parent):
 		tracker = generate_tracker(trackers_panel, entry)
 		trackers_panel_sizer.Add(tracker, 0, wx.ALL|wx.EXPAND, 5)
 	return trackers_view_panel
-
-def destroy_trackers_view():
-	client_state.gui_elements['trackers_view_panel'].Destroy()
-
-def update_trackers_view():
-	main_frame = client_state.gui_elements['main_frame']
-	main_frame_sizer = client_state.gui_elements['main_frame_sizer']
-	destroy_trackers_view()
-	trackers_view = generate_trackers_view(main_frame)
-	main_frame_sizer.Add(trackers_view, 1, wx.ALL|wx.EXPAND)
-	main_frame.Layout()
 
 def show_trackers_view():
 	client_state.gui_elements['trackers_view_panel'].Show()

@@ -63,37 +63,6 @@ def generate_notifications_options(parent):
 
 """-----------------------------------------------------------------------------
 
-	Trackers actions
-	
------------------------------------------------------------------------------"""
-
-def gui_update_notification_entry(gui, entry):
-	attr = wx.TextAttr()
-	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
-	current_time = time.perf_counter()
-	dt = current_time - entry['start_time']
-	clamped_dt = helpers.clamp(dt, minimum = 0)
-	formatted_dt = str(datetime.timedelta(seconds = round(clamped_dt)))
-	gui['time_ago'].SetValue('Scraped ' + formatted_dt + ' ago')
-	gui['time_ago'].SetStyle(0, 500, attr)
-
-def create_notification_gui_update_thread():
-	def gui_update_loop():
-		while client_state.app_open:
-			try:
-				for index, entry in enumerate(client_state.notification_entries):
-					gui = client_state.notification_gui_panels[index]
-					gui_update_notification_entry(gui, entry)
-			# notification_entries mutated during iteration
-			except RuntimeError:
-				pass
-			time.sleep(5)
-	thread = threading.Thread(None, target = gui_update_loop)
-	thread.start()
-
-
-"""-----------------------------------------------------------------------------
-
 	Notifications View creation
 
 -----------------------------------------------------------------------------"""
@@ -254,6 +223,37 @@ def generate_notification_newad(parent, notification_dict):
 
 """-----------------------------------------------------------------------------
 
+	Public tracker actions
+	
+-----------------------------------------------------------------------------"""
+
+def gui_update_notification_entry(gui, entry):
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	current_time = time.perf_counter()
+	dt = current_time - entry['start_time']
+	clamped_dt = helpers.clamp(dt, minimum = 0)
+	formatted_dt = str(datetime.timedelta(seconds = round(clamped_dt)))
+	gui['time_ago'].SetValue('Scraped ' + formatted_dt + ' ago')
+	gui['time_ago'].SetStyle(0, 500, attr)
+
+def create_notification_gui_update_thread():
+	def gui_update_loop():
+		while client_state.app_open:
+			try:
+				for index, entry in enumerate(client_state.notification_entries):
+					gui = client_state.notification_gui_panels[index]
+					gui_update_notification_entry(gui, entry)
+			# notification_entries mutated during iteration
+			except RuntimeError:
+				pass
+			time.sleep(5)
+	thread = threading.Thread(None, target = gui_update_loop)
+	thread.start()
+
+
+"""-----------------------------------------------------------------------------
+
 	Public Functions
 
 -----------------------------------------------------------------------------"""
@@ -321,12 +321,15 @@ def update_notifications_view():
 		gui['ad_url'].SetValue('')
 		gui['remove_notification_button'].Hide()
 	# updating header text to display num of notifications
+	displayed = 'No notifications found.'
 	if num_notifications >= client_state.max_notifications:
 		displayed = str(num_notifications) + ' notifications found. Maximum notifications reached, older notifications deleted.'
 		client_state.gui_elements['notifications_header_text'].SetValue(displayed)
-	else:
+	elif num_notifications == 1:
+		displayed = str(num_notifications) + ' notification found.'
+	elif num_notifications > 1:
 		displayed = str(num_notifications) + ' notifications found.'
-		client_state.gui_elements['notifications_header_text'].SetValue(displayed)
+	client_state.gui_elements['notifications_header_text'].SetValue(displayed)
 	main_frame = client_state.gui_elements['main_frame'].Layout()
 
 def show_notifications_view():

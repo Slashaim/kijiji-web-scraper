@@ -7,14 +7,18 @@
 -----------------------------------------------------------------------------"""
 
 import wx
-import re
-import time
 import asyncio
-import threading
 
 import kijiji_scraper
 import helpers
 import client_state
+
+
+"""-----------------------------------------------------------------------------
+
+	Globals
+	
+-----------------------------------------------------------------------------"""
 
 global USER_PRODUCT_NAME
 global USER_LOCATION_INDEX
@@ -310,7 +314,11 @@ def create_ad_horizontal_sizer():
 
 def create_scrape_header_text(parent):
 	num_ads = len(client_state.ad_entries)
-	displayed = str(num_ads) + ' ads found.'
+	displayed = 'No ads found.'
+	if num_ads == 1:
+		displayed = str(num_ads) + ' ad found.'
+	elif num_ads > 1:
+		displayed = str(num_ads) + ' ads found.'
 	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.BORDER_NONE|wx.TE_READONLY)
 	return text
 
