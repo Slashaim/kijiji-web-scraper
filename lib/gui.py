@@ -101,7 +101,8 @@ def create_options_panel_sizer():
 	return sizer
 
 def create_options_panel(parent):
-	panel = wx.Panel(parent, wx.ID_ANY, size = (300, 10000))
+	panel = wx.ScrolledCanvas(parent, wx.ID_ANY, size = (300, 10000))
+	panel.SetScrollbars(1, 10, 1, 10)
 	return panel
 
 def generate_options_panel(parent):
