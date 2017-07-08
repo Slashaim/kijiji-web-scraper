@@ -397,7 +397,8 @@ def create_tracker_location(parent, location):
 def create_tracker_max_price(parent, max_price):
 	attr = wx.TextAttr()
 	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
-	text = wx.TextCtrl(parent, wx.ID_ANY, max_price, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
+	displayed = max_price + ' max'
+	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
 	text.SetBackgroundColour(wx.Colour(240,240,240))
 	text.SetStyle(0, 500, attr)
 	return text
@@ -570,12 +571,3 @@ def show_trackers_view():
 
 def hide_trackers_view():
 	lib.client_state.gui_elements['trackers_view_panel'].Hide()
-
-# for i in range(0, 2):
-# 	kwargs = {
-# 		'product_name': str(i),
-# 		'location': 'city-of-toronto',
-# 		'max_price': None,
-# 		'cycle_time': 1800
-# 	}
-# 	add_tracker_entry(kwargs)

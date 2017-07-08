@@ -337,13 +337,3 @@ def show_notifications_view():
 
 def hide_notifications_view():
 	lib.client_state.gui_elements['notifications_view_panel'].Hide()
-
-# for i in range(0, 100):
-# 	client_state.notification_entries.append({
-# 		'notification_type': 'newad',
-# 		'front_text': 'New Ad',
-# 		'notification_title': 'foo',
-# 		'ad_price': 'no price given',
-# 		'ad_title': 'bar',
-# 		'ad_url': 'http://website.com'
-# 	})
