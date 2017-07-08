@@ -217,14 +217,9 @@ def instantiate():
 	instantiate_all_views()
 	hide_all_views()
 	change_view('scraping')
+	lib.notifications.create_instantiate_panels_thread() # costly, new thread so that app open does not stall
 	lib.notifications.create_notification_gui_update_thread()
 	lib.trackers.create_tracker_time_update_thread()
 	lib.trackers.create_tracker_ad_update_thread()
 	app.MainLoop()
-
-def main():
-	instantiate()
-
-if __name__ == "__main__":
-	main()
 	

@@ -91,6 +91,7 @@ MAX_SCRAPE_TIME = 10
 
 def convert_price_text_to_float(text):
 	try:
+		text = text.replace(',', '')
 		# takes the dollar sign off
 		return float(text[1::])
 	except ValueError:

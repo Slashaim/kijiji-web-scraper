@@ -94,15 +94,13 @@ class ValidProductNameTest(unittest.TestCase):
 
 class GetMaxAdsTest(unittest.TestCase):
 	def test_valid_numbers(self):
-		max_ads = helpers.get_max_ads(30)
+		max_ads = helpers.get_max_ads('30')
 		self.assertEqual(max_ads, 30)
-		max_ads = helpers.get_max_ads(5)
+		max_ads = helpers.get_max_ads('5')
 		self.assertEqual(max_ads, 5)
 
 	def test_invalid_numbers(self):
-		max_ads = helpers.get_max_ads(256.5)
-		self.assertIs(max_ads, None)
-		max_ads = helpers.get_max_ads(-325)
+		max_ads = helpers.get_max_ads('-325')
 		self.assertIs(max_ads, None)
 
 	def test_invalid_types(self):
@@ -134,6 +132,8 @@ class ConvertPriceToDisplayTest(unittest.TestCase):
 		self.assertEqual(display, '$234.60')
 		display = helpers.convert_price_to_display(2.57)
 		self.assertEqual(display, '$2.57')
+		display = helpers.convert_price_to_display(4325646.43)
+		self.assertEqual(display, '$4,325,646.43')
 		display = helpers.convert_price_to_display('no price given')
 		self.assertEqual(display, 'no price given')
 

@@ -55,8 +55,6 @@ def valid_product_name(arg):
 
 def get_max_ads(arg):
 	try:
-		if isinstance(arg, float):
-			raise ValueError
 		max_ads = int(arg)
 		if max_ads >= 0:
 			return max_ads
@@ -95,11 +93,8 @@ def get_max_price(arg):
 def convert_price_to_display(arg):
 	try:
 		nearest_cent = round(float(arg), 2)
-		cents = arg * 100
-		if cents % 10 == 0:
-			return '$' + str(nearest_cent) + '0'
-		else:
-			return '$' + str(nearest_cent)
+		thousands_separated = format(nearest_cent, ',.2f')
+		return '$' + thousands_separated
 	except TypeError:
 		if arg is None:
 			return ''

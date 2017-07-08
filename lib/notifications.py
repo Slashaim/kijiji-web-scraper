@@ -251,6 +251,17 @@ def create_notification_gui_update_thread():
 	thread = threading.Thread(None, target = gui_update_loop)
 	thread.start()
 
+def create_instantiate_panels_thread():
+	notifications_panel = lib.client_state.gui_elements['notifications_panel']
+	notifications_panel_sizer = lib.client_state.gui_elements['notifications_panel_sizer']
+	def instantiate_panels():
+		for i in range(0, lib.client_state.max_notifications):
+			notification_panel = generate_notification(notifications_panel, {'notification_type': 'newad'})
+			notifications_panel_sizer.Add(notification_panel, 0, wx.ALL|wx.EXPAND, 5)
+		update_notifications_view()
+	thread = threading.Thread(None, target = instantiate_panels)
+	thread.start()
+
 
 """-----------------------------------------------------------------------------
 
@@ -275,10 +286,6 @@ def generate_notifications_view(parent):
 	notifications_header = create_notifications_header_text(notifications_view_panel)
 	notifications_view_sizer.Add(notifications_header, 0, wx.ALL|wx.EXPAND, 5)
 	notifications_view_sizer.Add(notifications_panel, 1, wx.ALL|wx.EXPAND, 5)
-	for i in range(0, lib.client_state.max_notifications):
-		notification_panel = generate_notification(notifications_panel, {'notification_type': 'newad'})
-		notifications_panel_sizer.Add(notification_panel, 0, wx.ALL|wx.EXPAND, 5)
-	update_notifications_view()
 	return notifications_view_panel
 
 def destroy_notifications_view():
