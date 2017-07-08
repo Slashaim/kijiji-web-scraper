@@ -38,22 +38,30 @@ def clamp(val, minimum = None, maximum = None):
 alphanumeric_space_full = re.compile('^[\w ]+$')
 def valid_product_name(arg):
 	try:
-		match = alphanumeric_space_full.match(arg)
+		stripped_str = arg.strip()
+		match = alphanumeric_space_full.match(stripped_str)
 		return match is not None
 	except TypeError:
+		return False
+	except AttributeError:
 		return False
 
 
 """-----------------------------------------------------------------------------
 
-	Input conversions
+	Input conversions (string to other)
 	
 -----------------------------------------------------------------------------"""
 
 def get_max_ads(arg):
 	try:
+		if isinstance(arg, float):
+			raise ValueError
 		max_ads = int(arg)
-		return max_ads
+		if max_ads >= 0:
+			return max_ads
+		else:
+			raise ValueError
 	except ValueError:
 		return None
 	except SyntaxError:
