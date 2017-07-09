@@ -188,7 +188,14 @@ def generate_trackers_options(parent):
 	trackers_options_sizer.Add(tracker_location_choice, 0, wx.ALL|wx.EXPAND, 5)
 	trackers_options_sizer.Add(tracker_button, 0, wx.ALL|wx.EXPAND, 5)
 	trackers_options_sizer.Add(tracker_message, 0, wx.ALL|wx.EXPAND, 5)
+	lib.client_state.gui_elements['trackers_options_panel'] = trackers_options_panel
 	return trackers_options_panel
+
+def show_trackers_options():
+	lib.client_state.gui_elements['trackers_options_panel'].Show()
+
+def hide_trackers_options():
+	lib.client_state.gui_elements['trackers_options_panel'].Hide()
 
 
 """-----------------------------------------------------------------------------

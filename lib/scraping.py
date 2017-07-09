@@ -8,6 +8,7 @@
 
 import wx
 import asyncio
+import time
 
 import lib.kijiji_scraper
 import lib.helpers
@@ -201,6 +202,7 @@ def scrape_button_callback(arg):
 			return ad_list[:given_max_ads]
 
 	try:
+		start_time = time.perf_counter()
 		lib.client_state.ad_entries = lib.kijiji_scraper.get_ad_entries_from_constraints(
 			parameters = {
 				'product_name': given_product_name,
@@ -212,10 +214,13 @@ def scrape_button_callback(arg):
 			},
 			list_check = list_check
 		)
+		print(str(time.perf_counter() - start_time))
 		for ad in lib.client_state.ad_entries:
 			ad['location'] = lib.client_state.location_to_ui.get(ad['location'])
 			lib.client_state.viewed_ad_ids.add(ad['ad_id'])
+		start_time = time.perf_counter()
 		update_scrape_view()
+		print(str(time.perf_counter() - start_time))
 	except asyncio.TimeoutError:
 		scrape_message.SetValue('Connection timed out. Check internet connectivity or try again later.')
 
@@ -276,8 +281,14 @@ def generate_scrape_options(parent):
 	scrape_options_sizer.Add(location_choice, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_options_sizer.Add(scrape_button, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_options_sizer.Add(scrape_message, 0, wx.ALL|wx.EXPAND, 5)
+	lib.client_state.gui_elements['scrape_options_panel'] = scrape_options_panel
 	return scrape_options_panel
 
+def show_scrape_options():
+	lib.client_state.gui_elements['scrape_options_panel'].Show()
+
+def hide_scrape_options():
+	lib.client_state.gui_elements['scrape_options_panel'].Hide()
 
 """-----------------------------------------------------------------------------
 

@@ -115,6 +115,17 @@ def generate_options_panel(parent):
 	options_panel.SetSizer(options_sizer)
 	lib.client_state.gui_elements['options_panel'] = options_panel
 	lib.client_state.gui_elements['options_panel_sizer'] = options_sizer
+	views_options = generate_views_options(options_panel)
+	scraping_options = lib.scraping.generate_scrape_options(options_panel)
+	notifications_options = lib.notifications.generate_notifications_options(options_panel)
+	trackers_options = lib.trackers.generate_trackers_options(options_panel)
+	options_sizer.Add(views_options, 0, wx.ALL|wx.EXPAND)
+	options_sizer.Add(scraping_options, 0, wx.ALL|wx.EXPAND)
+	options_sizer.Add(notifications_options, 0, wx.ALL|wx.EXPAND)
+	options_sizer.Add(trackers_options, 0, wx.ALL|wx.EXPAND)
+	scraping_options.Hide()
+	notifications_options.Hide()
+	trackers_options.Hide()
 	return options_panel
 
 
@@ -125,21 +136,15 @@ def generate_options_panel(parent):
 -----------------------------------------------------------------------------"""
 
 def change_options_panel_state(new_view):
-	options_panel = lib.client_state.gui_elements['options_panel']
-	options_sizer = lib.client_state.gui_elements['options_panel_sizer']
-	options_sizer.Clear(delete_windows = True)
-	views_options = generate_views_options(options_panel)
-	options_sizer.Add(views_options, 0, wx.ALL|wx.EXPAND)
-	options_sizer.AddSpacer(20)
+	lib.scraping.hide_scrape_options()
+	lib.notifications.hide_notifications_options()
+	lib.trackers.hide_trackers_options()
 	if new_view == 'scraping':
-		scraping_options = lib.scraping.generate_scrape_options(options_panel)
-		options_sizer.Add(scraping_options, 0, wx.ALL|wx.EXPAND)
+		lib.scraping.show_scrape_options()
 	elif new_view == 'notifications':
-		notifications_options = lib.notifications.generate_notifications_options(options_panel)
-		options_sizer.Add(notifications_options, 0, wx.ALL|wx.EXPAND)
+		lib.notifications.show_notifications_options()
 	elif new_view == 'trackers':
-		trackers_options = lib.trackers.generate_trackers_options(options_panel)
-		options_sizer.Add(trackers_options, 0, wx.ALL|wx.EXPAND)
+		lib.trackers.show_trackers_options()
 
 
 """-----------------------------------------------------------------------------
@@ -185,8 +190,6 @@ def instantiate_all_views():
 	main_frame_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
 	main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
 	main_frame_sizer.Add(trackers_view, 1, wx.ALL|wx.EXPAND)
-
-def hide_all_views():
 	lib.scraping.hide_scrape_view()
 	lib.notifications.hide_notifications_view()
 	lib.trackers.hide_trackers_view()
@@ -194,12 +197,9 @@ def hide_all_views():
 def change_view(new_view):
 	active_view = lib.client_state.active_view
 	if new_view != active_view:
-		if active_view == 'scraping':
-			lib.scraping.hide_scrape_view()
-		elif active_view == 'notifications':
-			lib.notifications.hide_notifications_view()
-		elif active_view == 'trackers':
-			lib.trackers.hide_trackers_view()
+		lib.scraping.hide_scrape_view()
+		lib.notifications.hide_notifications_view()
+		lib.trackers.hide_trackers_view()
 		# create new view and display relevant options
 		main_frame = lib.client_state.gui_elements['main_frame']
 		main_frame_sizer = lib.client_state.gui_elements['main_frame_sizer']
@@ -219,7 +219,6 @@ def instantiate():
 	app = create_app()
 	main_frame = generate_main_frame()
 	instantiate_all_views()
-	hide_all_views()
 	change_view('scraping')
 	lib.notifications.create_instantiate_panels_thread() # costly, new thread so that app open does not stall
 	lib.notifications.create_notification_gui_update_thread()

@@ -58,7 +58,14 @@ def generate_notifications_options(parent):
 	# putting in sizers
 	notifications_options_sizer.Add(notifications_label, 0, wx.ALL|wx.EXPAND)
 	notifications_options_sizer.Add(clear_all_notifications_button, 0, wx.ALL|wx.EXPAND, 5)
+	lib.client_state.gui_elements['notifications_options_panel'] = notifications_options_panel
 	return notifications_options_panel
+
+def show_notifications_options():
+	lib.client_state.gui_elements['notifications_options_panel'].Show()
+
+def hide_notifications_options():
+	lib.client_state.gui_elements['notifications_options_panel'].Hide()
 
 
 """-----------------------------------------------------------------------------
