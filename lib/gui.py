@@ -47,28 +47,31 @@ def create_views_label(parent):
 	label = wx.StaticText(parent, wx.ID_ANY, "Change Views", style = wx.TE_READONLY|wx.TE_CENTRE|wx.BORDER_NONE)
 	return label
 
-def scrape_mode_button_callback(arg):
+def scrape_view_button_callback(arg):
 	change_view('scraping')
 
-def create_scrape_mode_button(parent):
+def create_scrape_view_button(parent):
 	button = wx.Button(parent, wx.ID_ANY, "Scraping View")
-	button.Bind(wx.EVT_BUTTON, scrape_mode_button_callback)
+	button.Bind(wx.EVT_BUTTON, scrape_view_button_callback)
+	lib.client_state.gui_elements['scrape_view_button'] = button
 	return button
 
-def notifications_mode_button_callback(arg):
+def notifications_view_button_callback(arg):
 	change_view('notifications')
 
-def create_notifications_mode_button(parent):
+def create_notifications_view_button(parent):
 	button = wx.Button(parent, wx.ID_ANY, "Notifications View")
-	button.Bind(wx.EVT_BUTTON, notifications_mode_button_callback)
+	button.Bind(wx.EVT_BUTTON, notifications_view_button_callback)
+	lib.client_state.gui_elements['notifications_view_button'] = button
 	return button
 
-def trackers_mode_button_callback(arg):
+def trackers_view_button_callback(arg):
 	change_view('trackers')
 
-def create_trackers_mode_button(parent):
+def create_trackers_view_button(parent):
 	button = wx.Button(parent, wx.ID_ANY, "Trackers View")
-	button.Bind(wx.EVT_BUTTON, trackers_mode_button_callback)
+	button.Bind(wx.EVT_BUTTON, trackers_view_button_callback)
+	lib.client_state.gui_elements['trackers_view_button'] = button
 	return button
 
 def generate_views_options(parent):
@@ -78,14 +81,14 @@ def generate_views_options(parent):
 	views_panel.SetSizer(views_sizer)
 	# creating elements
 	views_label = create_views_label(views_panel)
-	scrape_mode_button = create_scrape_mode_button(views_panel)
-	notifications_mode_button = create_notifications_mode_button(views_panel)
-	trackers_mode_button = create_trackers_mode_button(views_panel)
+	scrape_view_button = create_scrape_view_button(views_panel)
+	notifications_view_button = create_notifications_view_button(views_panel)
+	trackers_view_button = create_trackers_view_button(views_panel)
 	# adding to sizer
 	views_sizer.Add(views_label, 0, wx.ALL|wx.EXPAND)
-	views_sizer.Add(scrape_mode_button, 0, wx.ALL|wx.EXPAND, 5)
-	views_sizer.Add(notifications_mode_button, 0, wx.ALL|wx.EXPAND, 5)
-	views_sizer.Add(trackers_mode_button, 0, wx.ALL|wx.EXPAND, 5)
+	views_sizer.Add(scrape_view_button, 0, wx.ALL|wx.EXPAND, 5)
+	views_sizer.Add(notifications_view_button, 0, wx.ALL|wx.EXPAND, 5)
+	views_sizer.Add(trackers_view_button, 0, wx.ALL|wx.EXPAND, 5)
 	lib.client_state.gui_elements['views_options_panel'] = views_panel
 	return views_panel
 
