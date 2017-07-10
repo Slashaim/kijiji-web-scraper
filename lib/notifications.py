@@ -217,6 +217,7 @@ def generate_notification_newad(parent, notification_dict):
 		remove_notification_button.Hide()
 	# adding to state
 	lib.client_state.notification_gui_panels.append({
+		'panel': notification_panel,
 		'front_text': newad_front_text,
 		'notification_title': newad_notification_title,
 		'time_ago': newad_time_ago,
@@ -230,7 +231,7 @@ def generate_notification_newad(parent, notification_dict):
 
 """-----------------------------------------------------------------------------
 
-	Public tracker actions
+	Public notification actions
 	
 -----------------------------------------------------------------------------"""
 
@@ -254,23 +255,22 @@ def create_notification_gui_update_thread():
 			# notification_entries mutated during iteration
 			except RuntimeError:
 				pass
+			except IndexError:
+				pass
 			time.sleep(5)
 	thread = threading.Thread(None, target = gui_update_loop)
-	thread.start()
+	return thread
 
-def create_instantiate_panels_thread():
+def instantiate_panels():
 	notifications_panel = lib.client_state.gui_elements['notifications_panel']
 	notifications_panel_sizer = lib.client_state.gui_elements['notifications_panel_sizer']
 	notifications_view_button = lib.client_state.gui_elements['notifications_view_button']
 	notifications_view_button.Disable()
-	def instantiate_panels():
-		for i in range(0, lib.client_state.max_notifications):
-			notification_panel = generate_notification(notifications_panel, {'notification_type': 'newad'})
-			notifications_panel_sizer.Add(notification_panel, 0, wx.ALL|wx.EXPAND, 5)
-		update_notifications_view()
-		notifications_view_button.Enable()
-	thread = threading.Thread(None, target = instantiate_panels)
-	thread.start()
+	for i in range(0, lib.client_state.max_notifications):
+		notification_panel = generate_notification(notifications_panel, {'notification_type': 'newad'})
+		notifications_panel_sizer.Add(notification_panel, 0, wx.ALL|wx.EXPAND, 5)
+	update_notifications_view()
+	notifications_view_button.Enable()
 
 
 """-----------------------------------------------------------------------------
@@ -347,7 +347,7 @@ def update_notifications_view():
 	elif num_notifications > 1:
 		displayed = str(num_notifications) + ' notifications found.'
 	lib.client_state.gui_elements['notifications_header_text'].SetValue(displayed)
-	main_frame = lib.client_state.gui_elements['main_frame'].Layout()
+	lib.client_state.gui_elements['main_frame'].Layout()
 
 def show_notifications_view():
 	lib.client_state.gui_elements['notifications_view_panel'].Show()

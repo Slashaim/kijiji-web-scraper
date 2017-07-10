@@ -12,13 +12,14 @@ def main():
 			'title': 'foo',
 			'price': 500,
 			'date_posted': '5 minutes ago',
-			'location': 'Toronto',
+			'location': 'canada',
 			'url': 'http://website.com',
-			'description': 'bar'
+			'description': 'bar',
+			'html_class': 'normal'
 		})
 	# adding in test notifications
 	for i in range(0, 100):
-		lib.client_state.notification_entries.append({
+		lib.client_state.notification_entries.appendleft({
 			'notification_type': 'newad',
 			'front_text': 'New Ad',
 			'notification_title': 'foo',

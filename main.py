@@ -3,9 +3,9 @@
 	main.py
 
 	Dependencies:
-	- wx: GUI library
-	- aiohttp: Asynchronous http requests
-	- lxml: html parsing
+	- wxPython: GUI library
+	- aiohttp: Asynchronous HTTP requests
+	- lxml: HTML parsing
 
 -----------------------------------------------------------------------------"""
 

@@ -7,6 +7,7 @@
 -----------------------------------------------------------------------------"""
 
 import wx
+import threading
 
 import lib.scraping
 import lib.notifications
@@ -181,6 +182,11 @@ def generate_main_frame():
 	
 -----------------------------------------------------------------------------"""
 
+def hide_all_views():
+	lib.scraping.hide_scrape_view()
+	lib.notifications.hide_notifications_view()
+	lib.trackers.hide_trackers_view()
+
 def instantiate_all_views():
 	main_frame = lib.client_state.gui_elements['main_frame']
 	main_frame_sizer = lib.client_state.gui_elements['main_frame_sizer']
@@ -190,19 +196,13 @@ def instantiate_all_views():
 	main_frame_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
 	main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
 	main_frame_sizer.Add(trackers_view, 1, wx.ALL|wx.EXPAND)
-	lib.scraping.hide_scrape_view()
-	lib.notifications.hide_notifications_view()
-	lib.trackers.hide_trackers_view()
+	hide_all_views()
 
 def change_view(new_view):
 	active_view = lib.client_state.active_view
 	if new_view != active_view:
-		lib.scraping.hide_scrape_view()
-		lib.notifications.hide_notifications_view()
-		lib.trackers.hide_trackers_view()
+		hide_all_views()
 		# create new view and display relevant options
-		main_frame = lib.client_state.gui_elements['main_frame']
-		main_frame_sizer = lib.client_state.gui_elements['main_frame_sizer']
 		change_options_panel_state(new_view)
 		if new_view == 'scraping':
 			lib.scraping.show_scrape_view()
@@ -213,16 +213,21 @@ def change_view(new_view):
 		elif new_view == 'trackers':
 			lib.trackers.show_trackers_view()
 			lib.client_state.active_view = 'trackers'
-		main_frame.Layout()
+		lib.client_state.gui_elements['main_frame'].Layout()
 
 def instantiate():
 	app = create_app()
 	main_frame = generate_main_frame()
 	instantiate_all_views()
-	change_view('scraping')
-	lib.notifications.create_instantiate_panels_thread() # costly, new thread so that app open does not stall
-	lib.notifications.create_notification_gui_update_thread()
-	lib.trackers.create_tracker_time_update_thread()
-	lib.trackers.create_tracker_ad_update_thread()
+	# instantiating many new panels is costly, so they are run here so that
+	# app startup does not hang
+	def instantiate_panels():
+		lib.scraping.instantiate_panels()
+		lib.notifications.instantiate_panels()
+	wx.CallLater(0, instantiate_panels)
+	# running threads to update gui and automatic scraping
+	lib.notifications.create_notification_gui_update_thread().start()
+	lib.trackers.create_tracker_time_update_thread().start()
+	lib.trackers.create_tracker_ad_update_thread().start()
 	app.MainLoop()
 	

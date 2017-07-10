@@ -536,7 +536,7 @@ def create_tracker_time_update_thread():
 				pass
 			time.sleep(0.8)
 	thread = threading.Thread(None, target = time_update_loop)
-	thread.start()
+	return thread
 
 def create_tracker_ad_update_thread():
 	def ad_update_loop():
@@ -549,7 +549,7 @@ def create_tracker_ad_update_thread():
 				pass
 			time.sleep(1)
 	thread = threading.Thread(None, target = ad_update_loop)
-	thread.start()
+	return thread
 
 
 """-----------------------------------------------------------------------------

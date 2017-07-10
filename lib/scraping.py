@@ -9,6 +9,7 @@
 import wx
 import asyncio
 import time
+import threading
 
 import lib.kijiji_scraper
 import lib.helpers
@@ -202,7 +203,6 @@ def scrape_button_callback(arg):
 			return ad_list[:given_max_ads]
 
 	try:
-		start_time = time.perf_counter()
 		lib.client_state.ad_entries = lib.kijiji_scraper.get_ad_entries_from_constraints(
 			parameters = {
 				'product_name': given_product_name,
@@ -214,13 +214,9 @@ def scrape_button_callback(arg):
 			},
 			list_check = list_check
 		)
-		print(str(time.perf_counter() - start_time))
 		for ad in lib.client_state.ad_entries:
-			ad['location'] = lib.client_state.location_to_ui.get(ad['location'])
 			lib.client_state.viewed_ad_ids.add(ad['ad_id'])
-		start_time = time.perf_counter()
 		update_scrape_view()
-		print(str(time.perf_counter() - start_time))
 	except asyncio.TimeoutError:
 		scrape_message.SetValue('Connection timed out. Check internet connectivity or try again later.')
 
@@ -307,6 +303,7 @@ def create_scrape_view_panel(parent):
 
 def create_ads_panel_sizer():
 	sizer = wx.BoxSizer(wx.VERTICAL)
+	lib.client_state.gui_elements['ads_panel_sizer'] = sizer
 	return sizer
 
 def create_ads_panel(parent):
@@ -331,6 +328,7 @@ def create_scrape_header_text(parent):
 	elif num_ads > 1:
 		displayed = str(num_ads) + ' ads found.'
 	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.BORDER_NONE|wx.TE_READONLY)
+	lib.client_state.gui_elements['scrape_header_text'] = text
 	return text
 
 def create_ad_panel(parent, highlight = False):
@@ -389,13 +387,13 @@ def create_ad_description(parent, ad_description):
 
 def generate_ad_panel(parent, ad_dict):
 	# converting dict entries to strings
-	title = ad_dict.get('title')
-	price = lib.helpers.convert_price_to_display(ad_dict.get('price'))
-	date_posted = ad_dict.get('date_posted')
-	location = ad_dict.get('location')
-	url = ad_dict.get('url')
-	description = ad_dict.get('description')
-	html_class = lib.helpers.convert_html_class_to_display(ad_dict.get('html_class'))
+	title = ad_dict.get('title') or ''
+	price = lib.helpers.convert_price_to_display(ad_dict.get('price')) or ''
+	date_posted = ad_dict.get('date_posted') or ''
+	location = ad_dict.get('location') or ''
+	url = ad_dict.get('url') or ''
+	description = ad_dict.get('description') or ''
+	html_class = lib.helpers.convert_html_class_to_display(ad_dict.get('html_class')) or ''
 	# setting up panel, sub-panels, and sizers
 	ad_sizer = create_ad_panel_sizer()
 	horiz_sizer_1 = create_ad_horizontal_sizer()
@@ -431,7 +429,43 @@ def generate_ad_panel(parent, ad_dict):
 	ad_sizer.Add(subpanel_1, 0, wx.ALL|wx.EXPAND, 5)
 	ad_sizer.Add(subpanel_2, 0, wx.ALL|wx.EXPAND, 5)
 	ad_sizer.Add(subpanel_3, 0, wx.ALL|wx.EXPAND, 5)
+	# adding to state
+	lib.client_state.ad_gui_panels.append({
+		'panel': panel,
+		'ad_title': ad_title,
+		'ad_price': ad_price,
+		'ad_html_class': ad_html_class,
+		'ad_date_posted': ad_date_posted,
+		'ad_location': ad_location,
+		'ad_url': ad_url,
+		'ad_description': ad_description
+	})
 	return panel
+
+
+"""-----------------------------------------------------------------------------
+
+	Public scraping actions
+
+-----------------------------------------------------------------------------"""
+
+def instantiate_panels():
+	ads_panel = lib.client_state.gui_elements['ads_panel']
+	ads_panel_sizer = lib.client_state.gui_elements['ads_panel_sizer']
+	scrape_view_button = lib.client_state.gui_elements['scrape_view_button']
+	scrape_view_button.Disable()
+	for i in range(0, lib.client_state.max_ads):
+		ad_panel = generate_ad_panel(ads_panel, {})
+		ads_panel_sizer.Add(ad_panel, 0, wx.ALL|wx.EXPAND, 5)
+	update_scrape_view()
+	scrape_view_button.Enable()
+
+
+"""-----------------------------------------------------------------------------
+
+	Public functions
+
+-----------------------------------------------------------------------------"""
 
 def generate_scrape_view(parent):
 	scrape_view_sizer = create_scrape_view_sizer()
@@ -443,21 +477,46 @@ def generate_scrape_view(parent):
 	scrape_header_text = create_scrape_header_text(scrape_view_panel)
 	scrape_view_sizer.Add(scrape_header_text, 0, wx.ALL|wx.EXPAND, 5)
 	scrape_view_sizer.Add(ads_panel, 1, wx.ALL|wx.EXPAND, 5)
-	for ad in lib.client_state.ad_entries:
-		ad_panel = generate_ad_panel(ads_panel, ad)
-		ads_panel_sizer.Add(ad_panel, 0, wx.ALL|wx.EXPAND, 5)
 	return scrape_view_panel
 
-def destroy_scrape_view():
-	lib.client_state.gui_elements['scrape_view_panel'].Destroy()
-
 def update_scrape_view():
-	main_frame = lib.client_state.gui_elements['main_frame']
-	main_frame_sizer = lib.client_state.gui_elements['main_frame_sizer']
-	destroy_scrape_view()
-	scrape_view = generate_scrape_view(main_frame)
-	main_frame_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
-	main_frame.Layout()
+	num_ads = len(lib.client_state.ad_entries)
+	attr = wx.TextAttr()
+	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
+	# updating gui to match ads
+	try:
+		for index, entry in enumerate(lib.client_state.ad_entries):
+			gui = lib.client_state.ad_gui_panels[index]
+			gui['ad_title'].SetValue(entry['title'])
+			gui['ad_price'].SetValue(lib.helpers.convert_price_to_display(entry['price']))
+			gui['ad_html_class'].SetValue(lib.helpers.convert_html_class_to_display(entry['html_class']))
+			gui['ad_date_posted'].SetValue(entry['date_posted'])
+			gui['ad_location'].SetValue(lib.client_state.location_to_ui[entry['location']])
+			gui['ad_url'].SetValue(entry['url'])
+			gui['ad_description'].SetValue(entry['description'])
+			gui['ad_title'].SetStyle(0, 500, attr)
+			gui['ad_price'].SetStyle(0, 500, attr)
+			gui['ad_html_class'].SetStyle(0, 500, attr)
+	# ad_entries mutated during iteration
+	except RuntimeError:
+		pass
+	# gui panels that don't have a corresponding ad are set to blank
+	for index in range(num_ads, lib.client_state.max_ads):
+		gui = lib.client_state.ad_gui_panels[index]
+		gui['ad_title'].SetValue('')
+		gui['ad_price'].SetValue('')
+		gui['ad_html_class'].SetValue('')
+		gui['ad_date_posted'].SetValue('')
+		gui['ad_location'].SetValue('')
+		gui['ad_url'].SetValue('')
+	# updating header text to display num of ads
+	displayed = 'No ads found.'
+	if num_ads == 1:
+		displayed = str(num_ads) + ' ad found.'
+	elif num_ads > 1:
+		displayed = str(num_ads) + ' ads found.'
+	lib.client_state.gui_elements['scrape_header_text'].SetValue(displayed)
+	lib.client_state.gui_elements['main_frame'].Layout()
 
 def show_scrape_view():
 	lib.client_state.gui_elements['scrape_view_panel'].Show()

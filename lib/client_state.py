@@ -16,6 +16,7 @@ viewed_ad_ids = set()
 
 # view-specific state
 max_ads = 50
+ad_gui_panels = []
 ad_entries = []
 max_notifications = 100
 notification_gui_panels = []
