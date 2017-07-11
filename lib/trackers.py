@@ -405,6 +405,8 @@ def create_tracker_max_price(parent, max_price):
 	attr = wx.TextAttr()
 	attr.SetFontWeight(wx.FONTWEIGHT_BOLD)
 	displayed = max_price + ' max'
+	if max_price == '':
+		displayed = ''
 	text = wx.TextCtrl(parent, wx.ID_ANY, displayed, style = wx.TE_READONLY|wx.BORDER_NONE|wx.TE_NO_VSCROLL|wx.TE_RICH)
 	text.SetBackgroundColour(wx.Colour(240,240,240))
 	text.SetStyle(0, 500, attr)

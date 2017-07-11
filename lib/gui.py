@@ -159,20 +159,34 @@ def create_main_frame():
 	frame.Show()
 	frame.Centre()
 	frame.Maximize()
+	lib.client_state.gui_elements['main_frame'] = frame
 	return frame
 
 def create_main_frame_sizer():
 	sizer = wx.BoxSizer(wx.HORIZONTAL)
+	lib.client_state.gui_elements['main_frame_sizer'] = sizer
+	return sizer
+
+def create_main_view_panel(parent):
+	panel = wx.Panel(parent, wx.ID_ANY)
+	lib.client_state.gui_elements['main_view_panel'] = panel
+	return panel
+
+def create_main_view_sizer():
+	sizer = wx.BoxSizer(wx.HORIZONTAL)
+	lib.client_state.gui_elements['main_view_sizer'] = sizer
 	return sizer
 
 def generate_main_frame():
 	main_frame = create_main_frame()
 	options_panel = generate_options_panel(main_frame)
+	main_view_panel = create_main_view_panel(main_frame)
+	main_view_sizer = create_main_view_sizer()
+	main_view_panel.SetSizer(main_view_sizer)
 	sizer = create_main_frame_sizer()
 	sizer.Add(options_panel, 0, wx.ALL|wx.EXPAND)
+	sizer.Add(main_view_panel, 1, wx.ALL|wx.EXPAND)
 	main_frame.SetSizer(sizer)
-	lib.client_state.gui_elements['main_frame'] = main_frame
-	lib.client_state.gui_elements['main_frame_sizer'] = sizer
 	return main_frame
 
 
@@ -190,12 +204,14 @@ def hide_all_views():
 def instantiate_all_views():
 	main_frame = lib.client_state.gui_elements['main_frame']
 	main_frame_sizer = lib.client_state.gui_elements['main_frame_sizer']
-	scrape_view = lib.scraping.generate_scrape_view(main_frame)
-	notifications_view = lib.notifications.generate_notifications_view(main_frame)
-	trackers_view = lib.trackers.generate_trackers_view(main_frame)
-	main_frame_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
-	main_frame_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
-	main_frame_sizer.Add(trackers_view, 1, wx.ALL|wx.EXPAND)
+	main_view_panel = lib.client_state.gui_elements['main_view_panel']
+	main_view_sizer = lib.client_state.gui_elements['main_view_sizer']
+	scrape_view = lib.scraping.generate_scrape_view(main_view_panel)
+	notifications_view = lib.notifications.generate_notifications_view(main_view_panel)
+	trackers_view = lib.trackers.generate_trackers_view(main_view_panel)
+	main_view_sizer.Add(scrape_view, 1, wx.ALL|wx.EXPAND)
+	main_view_sizer.Add(notifications_view, 1, wx.ALL|wx.EXPAND)
+	main_view_sizer.Add(trackers_view, 1, wx.ALL|wx.EXPAND)
 	hide_all_views()
 
 def change_view(new_view):
