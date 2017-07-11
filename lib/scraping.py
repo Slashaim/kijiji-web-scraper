@@ -497,6 +497,7 @@ def update_scrape_view():
 			gui['ad_title'].SetStyle(0, 500, attr)
 			gui['ad_price'].SetStyle(0, 500, attr)
 			gui['ad_html_class'].SetStyle(0, 500, attr)
+			gui['panel'].Show()
 	# ad_entries mutated during iteration
 	except RuntimeError:
 		pass
@@ -509,6 +510,7 @@ def update_scrape_view():
 		gui['ad_date_posted'].SetValue('')
 		gui['ad_location'].SetValue('')
 		gui['ad_url'].SetValue('')
+		gui['panel'].Hide()
 	# updating header text to display num of ads
 	displayed = 'No ads found.'
 	if num_ads == 1:

@@ -324,6 +324,7 @@ def update_notifications_view():
 			gui['time_ago'].SetStyle(0, 500, attr)
 			update_remove_button_binding(gui['remove_notification_button'], entry)
 			gui['remove_notification_button'].Show()
+			gui['panel'].Show()
 	# notification_entries mutated during iteration
 	except RuntimeError:
 		pass
@@ -337,6 +338,7 @@ def update_notifications_view():
 		gui['ad_price'].SetValue('')
 		gui['ad_url'].SetValue('')
 		gui['remove_notification_button'].Hide()
+		gui['panel'].Hide()
 	# updating header text to display num of notifications
 	displayed = 'No notifications found.'
 	if num_notifications >= lib.client_state.max_notifications:
