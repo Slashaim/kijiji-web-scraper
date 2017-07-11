@@ -1,7 +1,7 @@
 """-----------------------------------------------------------------------------
 	
 	main.py
-
+	
 	Dependencies:
 	- wxPython: GUI library
 	- aiohttp: Asynchronous HTTP requests

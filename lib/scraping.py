@@ -35,6 +35,8 @@ USER_MAX_PRICE = None
 """-----------------------------------------------------------------------------
 
 	Scrape Options creation
+
+	Used to create the options (left side of window) that control scraping.
 	
 -----------------------------------------------------------------------------"""
 
@@ -289,6 +291,9 @@ def hide_scrape_options():
 """-----------------------------------------------------------------------------
 
 	Scrape View creation
+
+	Used to create scraping information, ie. everything not on the options panel
+	related to scraping.
 
 -----------------------------------------------------------------------------"""
 

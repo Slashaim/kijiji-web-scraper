@@ -22,6 +22,7 @@ import lib.client_state
 
 -----------------------------------------------------------------------------"""
 
+# HTML class names for different ad types.
 global NORMAL_AD_CLASS
 global TOP_AD_CLASS
 global THIRD_PARTY_TOP_AD_CLASS
@@ -44,6 +45,7 @@ THIRD_PARTY_NORMAL_AD_CLASS = '''"
              cas-channel regular-ad third-party
         "'''
 
+# ADDTO: each location has a name and code associated with it in the url
 global LOCATION_LOOKUP
 LOCATION_LOOKUP = {
 	# toronto (gta)
@@ -128,7 +130,9 @@ def generate_page_url_from_url_elements(url_elements, page_num):
 
 """-----------------------------------------------------------------------------
 
-	Parse html Content
+	Parse HTML content
+
+	Functions to parse the lxml etree. Uses xpath notation.
 
 -----------------------------------------------------------------------------"""
 
@@ -227,6 +231,8 @@ def get_bottom_bar_information(tree):
 """-----------------------------------------------------------------------------
 
 	Asynchronous Requests
+
+	Functions to generate and collect coroutines for getting pages.
 
 -----------------------------------------------------------------------------"""
 
@@ -371,27 +377,3 @@ def get_ad_entries_from_constraints(parameters, list_check):
 		current_time = time.perf_counter() - start
 		process_time_out = current_time >= MAX_SCRAPE_TIME
 	return post_proc(ad_entries)
-
-
-def main():
-	def foo():
-		ad_entries = get_ad_entries_from_constraints(
-			{
-				'product_name': 'playstation',
-				'location': 'mississauga-peel-region',
-				'show_top_ads': False,
-				'show_third_party_ads': False,
-				'only_new_ads': False,
-				'entry_incl': lambda x:True,
-				'post_proc': lambda x:x[:50]
-			},
-			list_check = lambda x: len(x) >= 50,
-		)
-		for ad in ad_entries:
-			title = ad.get('title')
-			print(title)
-	foo()
-
-
-if __name__ == "__main__":
-	main()

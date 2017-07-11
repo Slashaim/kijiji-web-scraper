@@ -1,3 +1,12 @@
+"""-----------------------------------------------------------------------------
+
+	test_main.py
+
+	Identical to main.py, except that the program state and UI is populated with 
+	dummy entries.
+
+-----------------------------------------------------------------------------"""
+
 import time
 
 import lib.gui

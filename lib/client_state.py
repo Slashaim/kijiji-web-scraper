@@ -24,6 +24,7 @@ notification_entries = collections.deque(maxlen = max_notifications)
 max_trackers = 10
 tracker_entries = []
 
+# ADDTO: any new locations and their conversions
 # for location list boxes
 valid_locations = [
 	'All of Toronto (GTA)',

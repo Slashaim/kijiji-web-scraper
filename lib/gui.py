@@ -7,7 +7,6 @@
 -----------------------------------------------------------------------------"""
 
 import wx
-import threading
 
 import lib.scraping
 import lib.notifications
@@ -26,6 +25,8 @@ def create_app():
 	def app_on_exit():
 		lib.client_state.app_open = False
 	lib.client_state.gui_elements['app'] = app
+	# overriding the OnExit method appears to cause a TypeError: invalid argument
+	# to sipBadCatcherResult() exception.
 	app.OnExit = app_on_exit
 	return app
 
@@ -33,6 +34,9 @@ def create_app():
 """-----------------------------------------------------------------------------
 
 	Views Options creation
+
+	Creates the part of the UI responsible for switching between 'views' or
+	modes.
 	
 -----------------------------------------------------------------------------"""
 
@@ -75,6 +79,7 @@ def create_trackers_view_button(parent):
 	lib.client_state.gui_elements['trackers_view_button'] = button
 	return button
 
+# ADDTO: Any new views need to have their buttons generated and placed here.
 def generate_views_options(parent):
 	# creating panel and setting sizer
 	views_panel = create_views_panel(parent)
@@ -97,6 +102,8 @@ def generate_views_options(parent):
 """-----------------------------------------------------------------------------
 
 	Options Panel creation
+
+	Creates the options panel, ie. everything on the left side of the UI.
 	
 -----------------------------------------------------------------------------"""
 
@@ -109,6 +116,7 @@ def create_options_panel(parent):
 	panel.SetScrollbars(1, 10, 1, 10)
 	return panel
 
+# ADDTO: Any view-specific options need to be generated and placed here.
 def generate_options_panel(parent):
 	# setting up panel and sizer
 	options_panel = create_options_panel(parent)
@@ -124,9 +132,7 @@ def generate_options_panel(parent):
 	options_sizer.Add(scraping_options, 0, wx.ALL|wx.EXPAND)
 	options_sizer.Add(notifications_options, 0, wx.ALL|wx.EXPAND)
 	options_sizer.Add(trackers_options, 0, wx.ALL|wx.EXPAND)
-	scraping_options.Hide()
-	notifications_options.Hide()
-	trackers_options.Hide()
+	hide_all_options()
 	return options_panel
 
 
@@ -136,10 +142,15 @@ def generate_options_panel(parent):
 	
 -----------------------------------------------------------------------------"""
 
-def change_options_panel_state(new_view):
+# ADDTO: All view-specific options need to be hidden here.
+def hide_all_options():
 	lib.scraping.hide_scrape_options()
 	lib.notifications.hide_notifications_options()
 	lib.trackers.hide_trackers_options()
+
+# ADDTO: All view-specific options need a case where they are shown.
+def change_options_panel_state(new_view):
+	hide_all_options()
 	if new_view == 'scraping':
 		lib.scraping.show_scrape_options()
 	elif new_view == 'notifications':
@@ -196,11 +207,13 @@ def generate_main_frame():
 	
 -----------------------------------------------------------------------------"""
 
+# ADDTO: All views need to be hidden here.
 def hide_all_views():
 	lib.scraping.hide_scrape_view()
 	lib.notifications.hide_notifications_view()
 	lib.trackers.hide_trackers_view()
 
+# ADDTO: All views need to be created and placed here.
 def instantiate_all_views():
 	main_frame = lib.client_state.gui_elements['main_frame']
 	main_frame_sizer = lib.client_state.gui_elements['main_frame_sizer']
@@ -214,6 +227,7 @@ def instantiate_all_views():
 	main_view_sizer.Add(trackers_view, 1, wx.ALL|wx.EXPAND)
 	hide_all_views()
 
+# ADDTO: All views need a case in which they are shown.
 def change_view(new_view):
 	active_view = lib.client_state.active_view
 	if new_view != active_view:
@@ -230,6 +244,13 @@ def change_view(new_view):
 			lib.trackers.show_trackers_view()
 			lib.client_state.active_view = 'trackers'
 		lib.client_state.gui_elements['main_frame'].Layout()
+
+
+"""-----------------------------------------------------------------------------
+
+	GUI creation
+	
+-----------------------------------------------------------------------------"""
 
 def instantiate():
 	app = create_app()

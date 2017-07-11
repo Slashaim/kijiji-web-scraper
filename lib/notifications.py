@@ -7,10 +7,8 @@
 -----------------------------------------------------------------------------"""
 
 import wx
-import re
 import time
 import datetime
-import asyncio
 import threading
 import collections
 
