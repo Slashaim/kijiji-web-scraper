@@ -12,9 +12,16 @@ import lxml.html
 import asyncio
 import aiohttp
 import time
+import urllib.robotparser
 
 import lib.client_state
 
+
+robot_parser = urllib.robotparser.RobotFileParser(url = 'http://kijiji.ca/robots.txt')
+robot_parser.read()
+can_fetch = robot_parser.can_fetch('*', 'http://kijiji.ca')
+if not can_fetch:
+	raise IOError('robots.txt for kijiji.ca suggests scraping disallowed.')
 
 """-----------------------------------------------------------------------------
 
@@ -243,7 +250,10 @@ async def get_ad_page_information(name, location, page_num, info_list):
 	root = None
 	async with aiohttp.ClientSession() as client_session:
 		with aiohttp.Timeout(CONNECTION_TIMEOUT):
-			page = await client_session.get(url)
+			page = await client_session.get(
+				url,
+				headers = {'User-Agent': 'mbot.1'}
+			)
 			html = await page.text()
 			root = lxml.html.fromstring(html)
 	bottom_bar_information = get_bottom_bar_information(root)
