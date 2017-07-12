@@ -140,7 +140,7 @@ def scrape_button_callback(arg):
 	given_max_ads = lib.helpers.get_max_ads(max_ads_text_box.GetLineText(lineNo = 0))
 	given_max_price = lib.helpers.get_max_price(max_price_text_box.GetLineText(lineNo = 0))
 	given_location = location_choice.GetSelection()
-	location = lib.client_state.ui_to_location.get(location_choice.GetString(given_location))
+	location = lib.helpers.convert_ui_to_location(location_choice.GetString(given_location))
 	if not lib.helpers.valid_product_name(given_product_name):
 		scrape_message.SetValue('Invalid product name. Only alphabetical and numeric characters are supported.')
 		product_name_text_box.SetBackgroundColour(wx.Colour(255, 240, 240))
@@ -496,7 +496,7 @@ def update_scrape_view():
 			gui['ad_price'].SetValue(lib.helpers.convert_price_to_display(entry['price']))
 			gui['ad_html_class'].SetValue(lib.helpers.convert_html_class_to_display(entry['html_class']))
 			gui['ad_date_posted'].SetValue(entry['date_posted'])
-			gui['ad_location'].SetValue(lib.client_state.location_to_ui[entry['location']])
+			gui['ad_location'].SetValue(lib.helpers.convert_location_to_ui(entry['location']))
 			gui['ad_url'].SetValue(entry['url'])
 			gui['ad_description'].SetValue(entry['description'])
 			gui['ad_title'].SetStyle(0, 500, attr)

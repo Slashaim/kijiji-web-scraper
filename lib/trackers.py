@@ -27,7 +27,7 @@ import lib.notifications
 def get_notification_title_from_tracker(entry):
 	product_name = entry['product_name']
 	given_location = entry.get('location')
-	location = lib.client_state.location_to_ui.get(given_location)
+	location = lib.helpers.convert_location_to_ui(given_location)
 	given_max_price = entry.get('max_price')
 	max_price = lib.helpers.convert_price_to_display(given_max_price)
 	if given_max_price and location:
@@ -113,7 +113,7 @@ def tracker_button_callback(arg):
 	given_product_name = tracker_product_name_text_box.GetLineText(lineNo = 0)
 	given_max_price = lib.helpers.get_max_price(tracker_max_price_text_box.GetLineText(lineNo = 0))
 	given_location = tracker_location_choice.GetSelection()
-	location = lib.client_state.ui_to_location.get(tracker_location_choice.GetString(given_location))
+	location = lib.helpers.convert_ui_to_location(tracker_location_choice.GetString(given_location))
 	if len(lib.client_state.tracker_entries) >= lib.client_state.max_trackers:
 		tracker_message.SetValue('Max trackers (' + str(lib.client_state.max_trackers) + ') reached.' )
 		return
@@ -462,7 +462,7 @@ def create_remove_tracker_button(parent, panel, entry):
 
 def generate_tracker(parent, tracker_dict):
 	product_name = tracker_dict.get('product_name')
-	location = lib.client_state.location_to_ui[tracker_dict['location']]
+	location = lib.helpers.convert_location_to_ui(tracker_dict['location'])
 	max_price = lib.helpers.convert_price_to_display(tracker_dict.get('max_price'))
 	# creating panels and setting sizers
 	tracker_panel = create_tracker_panel(parent)

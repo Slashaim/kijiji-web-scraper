@@ -7,6 +7,36 @@
 -----------------------------------------------------------------------------"""
 
 import re
+import logging
+
+logging.basicConfig(filename = '.program.log', filemode = 'w', format = '%(levelname)s: %(asctime)s: %(message)s')
+
+"""-----------------------------------------------------------------------------
+
+	Conversion Tables
+
+-----------------------------------------------------------------------------"""
+
+ui_to_location = {
+	'All of Toronto (GTA)': 'all-of-toronto',
+	'Toronto (GTA)': 'all-of-toronto',
+	'Canada': 'canada',
+	'City of Toronto': 'city-of-toronto',
+	'Markham / York Region': 'markham-york-region',
+	'Mississauga / Peel Region': 'mississauga-peel-region',
+	'Oakville / Halton Region': 'oakville-halton-region',
+	'Oshawa / Durham Region': 'oshawa-durham-region'
+}
+
+location_to_ui = {
+	'canada': 'Canada',
+	'all-of-toronto': 'All of Toronto (GTA)',
+	'city-of-toronto': 'City of Toronto',
+	'markham-york-region': 'Markham / York Region',
+	'mississauga-peel-region': 'Mississauga / Peel Region',
+	'oakville-halton-region': 'Oakville / Halton Region',
+	'oshawa-durham-region': 'Oshawa / Durham Region'
+}
 
 
 """-----------------------------------------------------------------------------
@@ -49,7 +79,7 @@ def valid_product_name(arg):
 
 """-----------------------------------------------------------------------------
 
-	Input conversions (string to other)
+	Input conversions
 	
 -----------------------------------------------------------------------------"""
 
@@ -83,6 +113,13 @@ def get_max_price(arg):
 	except SyntaxError:
 		return False
 
+def convert_ui_to_location(ui_location):
+	try:
+		return ui_to_location[ui_location]
+	except IndexError:
+		logging.warning("'" + ui_location + "' does not have an associated location.")
+		return ''
+
 
 """-----------------------------------------------------------------------------
 
@@ -114,4 +151,11 @@ def convert_html_class_to_display(arg):
 	elif arg == 'third_party':
 		return 'Third Party Ad'
 	else:
+		return ''
+
+def convert_location_to_ui(location):
+	try:
+		return location_to_ui[location]
+	except:
+		logging.warning("'" + location + "' does not have an associated UI display.")
 		return ''
