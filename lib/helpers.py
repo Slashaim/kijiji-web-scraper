@@ -9,7 +9,7 @@
 import re
 import logging
 
-logging.basicConfig(filename = '.program.log', filemode = 'w', format = '%(levelname)s: %(asctime)s: %(message)s')
+logging.basicConfig(filename = '.program.log', filemode = 'a', format = '%(levelname)s: %(asctime)s: %(message)s')
 
 """-----------------------------------------------------------------------------
 

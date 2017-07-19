@@ -252,7 +252,7 @@ async def get_ad_page_information(name, location, page_num, info_list):
 		with aiohttp.Timeout(CONNECTION_TIMEOUT):
 			page = await client_session.get(
 				url,
-				headers = {'User-Agent': 'mbot.1'}
+				headers = {'User-Agent': 'adbot.1'}
 			)
 			html = await page.text()
 			root = lxml.html.fromstring(html)
