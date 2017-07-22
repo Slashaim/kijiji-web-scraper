@@ -457,13 +457,10 @@ def generate_ad_panel(parent, ad_dict):
 def instantiate_panels():
 	ads_panel = lib.client_state.gui_elements['ads_panel']
 	ads_panel_sizer = lib.client_state.gui_elements['ads_panel_sizer']
-	scrape_view_button = lib.client_state.gui_elements['scrape_view_button']
-	scrape_view_button.Disable()
 	for i in range(0, lib.client_state.max_ads):
 		ad_panel = generate_ad_panel(ads_panel, {})
 		ads_panel_sizer.Add(ad_panel, 0, wx.ALL|wx.EXPAND, 5)
 	update_scrape_view()
-	scrape_view_button.Enable()
 
 
 """-----------------------------------------------------------------------------

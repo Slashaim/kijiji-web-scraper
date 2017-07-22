@@ -259,8 +259,16 @@ def instantiate():
 	# instantiating many new panels is costly, so they are run here so that
 	# app startup does not hang
 	def instantiate_panels():
+		# scraping view
+		scrape_view_button = lib.client_state.gui_elements['scrape_view_button']
+		scrape_view_button.Disable()
 		lib.scraping.instantiate_panels()
+		scrape_view_button.Enable()
+		# notifications view
+		notifications_view_button = lib.client_state.gui_elements['notifications_view_button']
+		notifications_view_button.Disable()
 		lib.notifications.instantiate_panels()
+		notifications_view_button.Enable()
 	wx.CallLater(0, instantiate_panels)
 	# running threads to update gui and automatic scraping
 	lib.notifications.create_notification_gui_update_thread().start()
